@@ -73,6 +73,15 @@
       background: rgba(0,0,0,.75); color: #fff; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none;
     }
     #toast.show { opacity: 1; }
+    .chk { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 15px; margin: 12px 2px; }
+    .chk input { width: 20px; height: 20px; margin: 0; }
+    .rep-row { display: flex; gap: 10px; align-items: baseline; padding: 10px 12px; background: var(--card); border-radius: 10px; margin-bottom: 4px; }
+    .rep-row .t-main div:first-child { overflow-wrap: anywhere; }
+    .cat-head { display: flex; justify-content: space-between; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--hint); margin: 16px 2px 6px; }
+    .exp-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--card); border-radius: 12px; margin-bottom: 6px; }
+    .exp-row .t-main { font-weight: 600; }
+    .btn.sm { padding: 8px 12px; font-size: 14px; }
+    .line-row.wo { grid-template-columns: 1fr auto 36px; }
   </style>
 </head>
 <body>
@@ -195,11 +204,12 @@ function render() {
 }
 
 /* ================= Учёт остатков =================
-   Остаток = последняя инвентаризация (факт) + все накладные после неё.
+   Остаток = последняя инвентаризация (факт) + накладные − списания после неё.
    Документы упорядочены по дате, затем по времени создания. */
 function stockMap(asOf, excludeId) {
   const ev = [];
   data.invoices.forEach(d => ev.push({ t: 'in', d }));
+  data.writeoffs.forEach(d => ev.push({ t: 'out', d }));
   data.counts.forEach(d => ev.push({ t: 'cnt', d }));
   ev.sort((a, b) => a.d.date.localeCompare(b.d.date) || a.d.created - b.d.created);
   const s = {};
@@ -207,15 +217,19 @@ function stockMap(asOf, excludeId) {
     if (d.id === excludeId) continue;
     if (asOf && d.date > asOf) continue;
     for (const l of d.lines) {
-      s[l.itemId] = t === 'in' ? r3((s[l.itemId] || 0) + l.qty) : l.actual;
+      if (t === 'in') s[l.itemId] = r3((s[l.itemId] || 0) + l.qty);
+      else if (t === 'out') s[l.itemId] = r3((s[l.itemId] || 0) - l.qty);
+      else s[l.itemId] = l.actual;
     }
   }
   return s;
 }
 const itemById = (id) => data.items.find(i => i.id === id);
+const itemName = (id) => (itemById(id) || { name: '(удалено)' }).name;
+const itemUnit = (id) => (itemById(id) || { unit: '' }).unit;
 const invoiceTotal = (d) => d.lines.reduce((a, l) => a + l.qty * l.price, 0);
-const itemUsed = (id) => data.invoices.some(d => d.lines.some(l => l.itemId === id)) ||
-                         data.counts.some(d => d.lines.some(l => l.itemId === id));
+const itemUsed = (id) => ['invoices', 'writeoffs', 'counts'].some(k => data[k].some(d => d.lines.some(l => l.itemId === id)));
+const WRITEOFF_REASONS = ['Продажа', 'Расход на производство', 'Порча / брак', 'Прочее'];
 
 /* ================= Экраны ================= */
 const VIEWS = {};
@@ -243,7 +257,7 @@ async function openUnit(key) {
   } catch (e) {
     console.error(e); notify('Не удалось загрузить данные: ' + e); data = {};
   }
-  data.items = data.items || []; data.invoices = data.invoices || []; data.counts = data.counts || [];
+  ['items', 'invoices', 'writeoffs', 'counts'].forEach(k => { data[k] = data[k] || []; });
   stack.length = 1;
   stack.push({ view: 'unit' });
   render();
@@ -260,15 +274,30 @@ VIEWS.unit = (el) => {
       <span class="t-main"><div class="t-name">Номенклатура</div><div class="t-desc">Позиций: ${data.items.length}</div></span>
       <span class="arrow">›</span>
     </button>
+    <button class="tile" data-go="report">
+      <span class="icon">📊</span>
+      <span class="t-main"><div class="t-name">Остатки</div><div class="t-desc">Количество и сумма на складе</div></span>
+      <span class="arrow">›</span>
+    </button>
+    <button class="tile" data-go="invoices">
+      <span class="icon">🧾</span>
+      <span class="t-main"><div class="t-name">Накладные</div><div class="t-desc">Приход · документов: ${data.invoices.length}</div></span>
+      <span class="arrow">›</span>
+    </button>
+    <button class="tile" data-go="writeoffs">
+      <span class="icon">📤</span>
+      <span class="t-main"><div class="t-name">Списания</div><div class="t-desc">Расход · документов: ${data.writeoffs.length}</div></span>
+      <span class="arrow">›</span>
+    </button>
     <button class="tile" data-go="counts">
       <span class="icon">📋</span>
       <span class="t-main"><div class="t-name">Инвентаризация</div>
         <div class="t-desc">${lastCount ? 'Последняя: ' + fDate(lastCount.date) : 'Ещё не проводилась'}</div></span>
       <span class="arrow">›</span>
     </button>
-    <button class="tile" data-go="invoices">
-      <span class="icon">🧾</span>
-      <span class="t-main"><div class="t-name">Накладные</div><div class="t-desc">Документов: ${data.invoices.length}</div></span>
+    <button class="tile" data-go="export">
+      <span class="icon">📥</span>
+      <span class="t-main"><div class="t-name">Выгрузка в Excel</div><div class="t-desc">Остатки, номенклатура, документы</div></span>
       <span class="arrow">›</span>
     </button>`;
   el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
@@ -582,6 +611,285 @@ VIEWS.count = (el, r) => {
     save(); back();
   };
   drawRows();
+};
+
+/* ---------- Остатки ---------- */
+VIEWS.report = (el, r) => {
+  if (!r.date) r.date = today();
+  if (r.nz == null) r.nz = true;
+  el.innerHTML = `
+    <h1>Остатки</h1>
+    <p class="sub">${h(UNITS[unitKey].title)} · сумма по цене закупки</p>
+    <div class="grid2">
+      <div><label>На дату</label><input id="date" type="date" value="${h(r.date)}"></div>
+      <div><label>Поиск</label><input id="q" type="search" placeholder="Товар" value="${h(r.q || '')}"></div>
+    </div>
+    <label class="chk"><input type="checkbox" id="nz" ${r.nz ? 'checked' : ''}> Скрыть нулевые остатки</label>
+    <div id="list"></div>
+    <div class="total"><span>Итого на складе</span><span id="sum"></span></div>
+    <button class="btn ghost wide" id="xls">📥 Выгрузить остатки в Excel</button>`;
+  const list = el.querySelector('#list');
+  const draw = () => {
+    const stock = stockMap(r.date);
+    const q = (r.q || '').toLowerCase().trim();
+    const rows = data.items
+      .filter(i => !q || i.name.toLowerCase().includes(q) || (i.category || '').toLowerCase().includes(q))
+      .filter(i => !r.nz || (stock[i.id] || 0) !== 0)
+      .sort((a, b) => (a.category || '').localeCompare(b.category || '', 'ru') || a.name.localeCompare(b.name, 'ru'));
+    let total = 0, html = '', cat = null, catSum = 0, catHtml = '';
+    const flush = () => { if (cat !== null) html += `<div class="cat-head"><span>${h(cat || 'Без категории')}</span><span>${fMoney(catSum)}</span></div>` + catHtml; };
+    for (const i of rows) {
+      if ((i.category || '') !== cat) { flush(); cat = i.category || ''; catSum = 0; catHtml = ''; }
+      const qty = stock[i.id] || 0, sum = qty * (i.price || 0);
+      total += sum; catSum += sum;
+      catHtml += `<div class="rep-row">
+        <span class="t-main"><div>${h(i.name)}</div><div class="cnt-meta">${fMoney(i.price)} за ${h(i.unit)}</div></span>
+        <span class="t-side ${qty < 0 ? 'minus' : ''}"><b>${fQty(qty)}</b> ${h(i.unit)}<div class="cnt-meta">${fMoney(sum)}</div></span>
+      </div>`;
+    }
+    flush();
+    list.innerHTML = html || '<div class="empty">Нет позиций для отображения</div>';
+    el.querySelector('#sum').textContent = fMoney(total);
+  };
+  el.querySelector('#date').onchange = (e) => { r.date = e.target.value || today(); draw(); };
+  el.querySelector('#q').oninput = (e) => { r.q = e.target.value; draw(); };
+  el.querySelector('#nz').onchange = (e) => { r.nz = e.target.checked; draw(); };
+  el.querySelector('#xls').onclick = () => exportXlsx(['stock'], { asOf: r.date });
+  draw();
+};
+
+/* ---------- Списания ---------- */
+VIEWS.writeoffs = (el) => {
+  const docs = [...data.writeoffs].sort((a, b) => b.date.localeCompare(a.date) || b.created - a.created);
+  el.innerHTML = `
+    <h1>Списания</h1>
+    <p class="sub">Расход товара · ${h(UNITS[unitKey].title)}</p>
+    <button class="btn wide" id="add" style="margin:0 0 12px">+ Новое списание</button>
+    ${docs.length ? docs.map(d => `
+      <button class="tile" data-id="${d.id}">
+        <span class="t-main"><div class="t-name">${h(d.reason)} · ${fDate(d.date)}</div>
+          <div class="t-desc">${h(d.comment || '')}${d.comment ? ' · ' : ''}позиций: ${d.lines.length}</div></span>
+        <span class="t-side"><b>${fMoney(invoiceTotal(d))}</b></span>
+      </button>`).join('') : '<div class="empty">Списаний пока нет</div>'}`;
+  el.querySelector('#add').onclick = () => {
+    if (!data.items.length) return notify('Сначала добавьте позиции в номенклатуру.');
+    go('writeoff', { id: null });
+  };
+  el.querySelectorAll('[data-id]').forEach(b => b.onclick = () => go('writeoff', { id: b.dataset.id }));
+};
+
+VIEWS.writeoff = (el, r) => {
+  const existing = r.id && data.writeoffs.find(d => d.id === r.id);
+  if (!r.draft) {
+    r.draft = existing ? clone(existing)
+      : { id: uid(), date: today(), reason: WRITEOFF_REASONS[0], comment: '', lines: [{ itemId: '', qty: '' }], created: Date.now() };
+    r.draft.lines.forEach(l => { l.qty = String(l.qty); });
+  }
+  const d = r.draft;
+  const items = [...data.items].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  const stockNow = () => stockMap(d.date, d.id);
+  let stock = stockNow();
+  const stockHint = (id) => id ? `На складе: ${fQty(stock[id])} ${h(itemUnit(id))}` : '';
+
+  el.innerHTML = `
+    <h1>${existing ? 'Списание' : 'Новое списание'}</h1>
+    <div class="grid2">
+      <div><label>Дата</label><input id="date" type="date" value="${h(d.date)}"></div>
+      <div><label>Причина</label>
+        <select id="reason">${WRITEOFF_REASONS.map(x => `<option ${x === d.reason ? 'selected' : ''}>${h(x)}</option>`).join('')}</select></div>
+    </div>
+    <label>Комментарий</label>
+    <input id="comment" value="${h(d.comment)}" placeholder="Необязательно">
+    <div class="section-title">Товары</div>
+    <div id="lines">${d.lines.map((l, i) => `
+      <div class="line" data-i="${i}">
+        <select class="l-item">
+          <option value="">— выберите товар —</option>
+          ${items.map(it => `<option value="${it.id}" ${it.id === l.itemId ? 'selected' : ''}>${h(it.name)} (${h(it.unit)})</option>`).join('')}
+        </select>
+        <div class="line-row wo">
+          <input class="l-qty" inputmode="decimal" placeholder="Количество" value="${h(l.qty)}">
+          <span class="cnt-meta l-stock">${stockHint(l.itemId)}</span>
+          <button class="icon-btn l-del" title="Убрать">✕</button>
+        </div>
+      </div>`).join('')}</div>
+    <button class="btn ghost wide" id="addLine" style="margin-top:4px">+ Добавить строку</button>
+    <div class="total"><span>Сумма списания</span><span id="total"></span></div>
+    <button class="btn wide" id="save">Провести списание</button>
+    ${existing ? '<button class="btn danger wide" id="del">Удалить списание</button>' : ''}`;
+
+  const recalc = () => {
+    let total = 0;
+    d.lines.forEach(l => { const it = itemById(l.itemId), q = num(l.qty); if (it && !isNaN(q)) total += q * (it.price || 0); });
+    el.querySelector('#total').textContent = fMoney(total);
+  };
+  ['comment', 'reason'].forEach(f => el.querySelector('#' + f).oninput = el.querySelector('#' + f).onchange = (e) => { d[f] = e.target.value; });
+  el.querySelector('#date').onchange = (e) => {
+    d.date = e.target.value; stock = stockNow();
+    el.querySelectorAll('.line').forEach(row => row.querySelector('.l-stock').innerHTML = stockHint(d.lines[row.dataset.i].itemId));
+  };
+  const linesEl = el.querySelector('#lines');
+  linesEl.oninput = linesEl.onchange = (e) => {
+    const row = e.target.closest('.line'); if (!row) return;
+    const l = d.lines[row.dataset.i];
+    if (e.target.classList.contains('l-item')) { l.itemId = e.target.value; row.querySelector('.l-stock').innerHTML = stockHint(l.itemId); }
+    if (e.target.classList.contains('l-qty')) l.qty = e.target.value;
+    recalc();
+  };
+  linesEl.onclick = (e) => {
+    if (!e.target.classList.contains('l-del')) return;
+    d.lines.splice(e.target.closest('.line').dataset.i, 1);
+    if (!d.lines.length) d.lines.push({ itemId: '', qty: '' });
+    render();
+  };
+  el.querySelector('#addLine').onclick = () => { d.lines.push({ itemId: '', qty: '' }); render(); };
+
+  el.querySelector('#save').onclick = async () => {
+    if (!d.date) return notify('Укажите дату');
+    const lines = [], over = [];
+    const need = {};
+    for (const l of d.lines) {
+      if (!l.itemId && !l.qty) continue;
+      const qty = num(l.qty);
+      if (!l.itemId) return notify('В одной из строк не выбран товар');
+      if (isNaN(qty) || qty <= 0) return notify(`Неверное количество: ${itemName(l.itemId)}`);
+      const it = itemById(l.itemId);
+      lines.push({ itemId: l.itemId, qty: r3(qty), price: it.price || 0 });
+      need[l.itemId] = r3((need[l.itemId] || 0) + qty);
+    }
+    if (!lines.length) return notify('Добавьте хотя бы один товар');
+    for (const id in need) if (need[id] > (stock[id] || 0)) over.push(itemName(id));
+    if (over.length && !(await ask(`Списывается больше, чем есть на складе: ${over.join(', ')}. Остаток уйдёт в минус. Продолжить?`))) return;
+    const doc = { id: d.id, date: d.date, reason: d.reason, comment: d.comment.trim(), lines, created: d.created };
+    const idx = data.writeoffs.findIndex(x => x.id === doc.id);
+    if (idx >= 0) data.writeoffs[idx] = doc; else data.writeoffs.push(doc);
+    save(); back();
+  };
+  const del = el.querySelector('#del');
+  if (del) del.onclick = async () => {
+    if (!(await ask('Удалить списание? Остатки будут пересчитаны.'))) return;
+    data.writeoffs = data.writeoffs.filter(x => x.id !== d.id);
+    save(); back();
+  };
+  recalc();
+};
+
+/* ---------- Выгрузка в Excel ---------- */
+const SHEETS = {
+  stock: {
+    title: 'Остатки',
+    rows: ({ asOf }) => {
+      const s = stockMap(asOf);
+      const items = [...data.items].sort((a, b) => (a.category || '').localeCompare(b.category || '', 'ru') || a.name.localeCompare(b.name, 'ru'));
+      const rows = [['Категория', 'Наименование', 'Ед.', 'Остаток', 'Цена закупки', 'Сумма']];
+      let total = 0;
+      items.forEach(i => { const q = s[i.id] || 0, sum = r2(q * (i.price || 0)); total += sum; rows.push([i.category || '', i.name, i.unit, q, i.price || 0, sum]); });
+      rows.push(['', 'ИТОГО на ' + fDate(asOf || today()), '', '', '', r2(total)]);
+      return rows;
+    },
+  },
+  items: {
+    title: 'Номенклатура',
+    rows: () => [['Категория', 'Наименование', 'Ед.', 'Цена закупки']].concat(
+      [...data.items].sort((a, b) => (a.category || '').localeCompare(b.category || '', 'ru') || a.name.localeCompare(b.name, 'ru'))
+        .map(i => [i.category || '', i.name, i.unit, i.price || 0])),
+  },
+  invoices: {
+    title: 'Накладные',
+    rows: (o) => [['Дата', 'Номер', 'Поставщик', 'Товар', 'Ед.', 'Кол-во', 'Цена', 'Сумма']].concat(
+      docsInRange(data.invoices, o).flatMap(d => d.lines.map(l =>
+        [fDate(d.date), d.number, d.supplier, itemName(l.itemId), itemUnit(l.itemId), l.qty, l.price, r2(l.qty * l.price)]))),
+  },
+  writeoffs: {
+    title: 'Списания',
+    rows: (o) => [['Дата', 'Причина', 'Комментарий', 'Товар', 'Ед.', 'Кол-во', 'Цена', 'Сумма']].concat(
+      docsInRange(data.writeoffs, o).flatMap(d => d.lines.map(l =>
+        [fDate(d.date), d.reason, d.comment, itemName(l.itemId), itemUnit(l.itemId), l.qty, l.price, r2(l.qty * l.price)]))),
+  },
+  counts: {
+    title: 'Инвентаризации',
+    rows: (o) => [['Дата', 'Товар', 'Ед.', 'По учёту', 'Факт', 'Разница', 'Сумма разницы']].concat(
+      docsInRange(data.counts, o).flatMap(d => d.lines.map(l => {
+        const diff = r3(l.actual - l.expected);
+        return [fDate(d.date), itemName(l.itemId), itemUnit(l.itemId), l.expected, l.actual, diff, r2(diff * ((itemById(l.itemId) || {}).price || 0))];
+      }))),
+  },
+};
+function r2(n) { return Math.round(n * 100) / 100; }
+function docsInRange(docs, { from, to } = {}) {
+  return docs.filter(d => (!from || d.date >= from) && (!to || d.date <= to))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.created - b.created);
+}
+
+let xlsxLoading = null;
+function loadXlsx() {
+  if (window.XLSX) return Promise.resolve();
+  if (!xlsxLoading) xlsxLoading = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = res;
+    s.onerror = () => { xlsxLoading = null; rej(new Error('нет связи с сервером')); };
+    document.head.appendChild(s);
+  });
+  return xlsxLoading;
+}
+
+async function exportXlsx(keys, opts = {}) {
+  toast('Готовлю файл…');
+  try { await loadXlsx(); } catch (e) { return notify('Не удалось загрузить модуль Excel: ' + e.message); }
+  const wb = XLSX.utils.book_new();
+  for (const k of keys) {
+    const rows = SHEETS[k].rows(opts);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = rows[0].map((_, c) => ({ wch: Math.min(40, Math.max(8, ...rows.map(r => String(r[c] ?? '').length + 2))) }));
+    XLSX.utils.book_append_sheet(wb, ws, SHEETS[k].title);
+  }
+  const name = `${keys.length === 1 ? SHEETS[keys[0]].title : 'Склад'} ${UNITS[unitKey].title.replace(/[«»"]/g, '')} ${fDate(today())}.xlsx`;
+  XLSX.writeFile(wb, name);
+  if (inTelegram && !['tdesktop', 'macos', 'weba', 'webk', 'web'].includes(tg.platform)) {
+    setTimeout(() => toast('Если файл не скачался — нажмите «Копировать»'), 1500);
+  }
+}
+
+async function copyTable(key, opts = {}) {
+  const tsv = SHEETS[key].rows(opts).map(r => r.map(c =>
+    typeof c === 'number' ? String(c).replace('.', ',') : String(c ?? '').replace(/[\t\r\n]+/g, ' ')).join('\t')).join('\n');
+  try {
+    await navigator.clipboard.writeText(tsv);
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = tsv; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy'); ta.remove();
+    if (!ok) return notify('Не удалось скопировать');
+  }
+  toast('Скопировано — вставьте в Excel или Google Таблицы');
+}
+
+VIEWS.export = (el, r) => {
+  const o = r.opts || (r.opts = { from: '', to: '', asOf: today() });
+  el.innerHTML = `
+    <h1>Выгрузка в Excel</h1>
+    <p class="sub">${h(UNITS[unitKey].title)}</p>
+    <div class="grid2">
+      <div><label>Документы с</label><input id="from" type="date" value="${h(o.from)}"></div>
+      <div><label>по</label><input id="to" type="date" value="${h(o.to)}"></div>
+    </div>
+    <p class="hint">Пустые даты — за всё время. Остатки считаются на дату «по» (или на сегодня).</p>
+    <button class="btn wide" id="all">📥 Скачать всё одним файлом</button>
+    <div class="section-title">По отдельности</div>
+    ${Object.entries(SHEETS).map(([k, s]) => `
+      <div class="exp-row">
+        <span class="t-main">${h(s.title)}</span>
+        <button class="btn sm" data-x="${k}">Excel</button>
+        <button class="btn sm ghost" data-c="${k}">Копировать</button>
+      </div>`).join('')}
+    <p class="hint" style="margin-top:14px">На телефоне Telegram иногда не даёт скачивать файлы. Тогда нажмите «Копировать» и вставьте таблицу в Excel или Google Таблицы.</p>`;
+  const sync = () => { o.from = el.querySelector('#from').value; o.to = el.querySelector('#to').value; o.asOf = o.to || today(); };
+  el.querySelector('#from').onchange = el.querySelector('#to').onchange = sync;
+  el.querySelector('#all').onclick = () => { sync(); exportXlsx(Object.keys(SHEETS), o); };
+  el.querySelectorAll('[data-x]').forEach(b => b.onclick = () => { sync(); exportXlsx([b.dataset.x], o); });
+  el.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { sync(); copyTable(b.dataset.c, o); });
 };
 
 render();
