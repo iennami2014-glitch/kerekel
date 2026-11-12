@@ -175,11 +175,19 @@ async function api(path, body) {
     opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);
   }
+  const ctrl = window.AbortController ? new AbortController() : null;
+  if (ctrl) opts.signal = ctrl.signal;
+  const timer = ctrl && setTimeout(() => ctrl.abort(), body !== undefined ? 90000 : 45000);
   let r;
   try {
     r = await fetch(API_URL + path, opts);
   } catch (e) {
-    throw new Error('Сервер на компьютере не отвечает. Проверьте, что запущен start.cmd, затем закройте приложение и откройте его снова кнопкой «Склад».');
+    const host = API_URL.replace(/^https?:\/\//, '');
+    throw new Error((e && e.name === 'AbortError' ? 'Сервер слишком долго не отвечает.' : 'Сервер на компьютере не отвечает.')
+      + ' Проверьте, что запущен start.cmd. Затем полностью закройте приложение и откройте его кнопкой «Склад» слева от поля ввода'
+      + ' (не кнопкой из старого сообщения).\nАдрес сервера: ' + host);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
   let data = null;
   try { data = await r.json(); } catch (e) { /* не JSON */ }
@@ -949,7 +957,7 @@ async function withLoading(el, fn) {
     await fn();
   } catch (e) {
     console.error(e);
-    el.innerHTML = `<div class="empty">${h(e.message)}</div><button class="btn ghost wide" id="retry">Повторить</button>`;
+    el.innerHTML = `<div class="empty" style="white-space:pre-line">${h(e.message)}</div><button class="btn ghost wide" id="retry">Повторить</button>`;
     el.querySelector('#retry').onclick = render;
   }
 }
