@@ -86,6 +86,42 @@
     .line input.l-prod { background: var(--bg); }
     .btn:disabled { opacity: .6; cursor: default; }
     .tile.static { cursor: default; }
+    h1 { padding-right: 44px; }
+    .qa { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 2px 0 4px; }
+    .qa button {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+      min-height: 98px; padding: 12px 6px; border: 0; border-radius: 16px; cursor: pointer;
+      background: var(--accent); color: var(--accent-text); font: inherit; font-weight: 600; font-size: 14px; line-height: 1.2; text-align: center;
+    }
+    .qa button .e { font-size: 30px; line-height: 1; }
+    .qa button:active { transform: scale(.97); }
+    .search { position: relative; margin: 0 0 12px; }
+    .search input { padding-left: 40px; }
+    .search::before { content: "🔍"; position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-size: 15px; opacity: .55; pointer-events: none; }
+    .chips { display: flex; gap: 6px; overflow-x: auto; margin: 0 -16px 10px; padding: 0 16px 2px; scrollbar-width: none; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { flex: 0 0 auto; padding: 8px 14px; border: 0; border-radius: 18px; background: var(--card); color: var(--text); font: inherit; font-size: 14px; cursor: pointer; }
+    .chip.on { background: var(--accent); color: var(--accent-text); font-weight: 600; }
+    .date-head { position: sticky; top: 0; z-index: 2; background: var(--bg); display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 12px 2px 6px; font-weight: 700; font-size: 15px; }
+    .date-head span:last-child { color: var(--hint); font-weight: 500; font-size: 13px; text-align: right; }
+    .st { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 8px; margin-top: 5px; margin-right: 4px; }
+    .st.new { background: #fff1c7; color: #7a5600; }
+    .st.done { background: #dff3e5; color: #1e7034; }
+    .st.tg { background: #e3eefc; color: #1d5fae; }
+    .help-fab { position: fixed; top: 10px; right: 12px; z-index: 5; width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--card); color: var(--accent); font: inherit; font-weight: 700; font-size: 18px; cursor: pointer; box-shadow: 0 1px 5px rgba(0,0,0,.15); }
+    .help { background: var(--card); border-left: 4px solid var(--accent); border-radius: 12px; padding: 12px 14px; margin: 0 0 14px; font-size: 15px; line-height: 1.45; }
+    .help b { display: block; margin-bottom: 4px; font-size: 16px; }
+    .help ol { margin: 6px 0 0; padding-left: 20px; }
+    .help .btn { margin-top: 10px; }
+    .banner { display: flex; gap: 10px; align-items: center; background: #fff1c7; color: #5c4300; border-radius: 12px; padding: 10px 12px; margin: 0 0 12px; font-size: 14px; line-height: 1.35; }
+    .banner .btn { margin-left: auto; flex: 0 0 auto; }
+    .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; background: var(--card); border-radius: 12px; padding: 12px 14px; font-size: 15px; margin-bottom: 12px; }
+    .kv > div:nth-child(odd) { color: var(--hint); }
+    .kv > div { overflow-wrap: anywhere; }
+    .tile.doc { padding: 10px 12px; gap: 12px; margin-bottom: 8px; }
+    .tile.doc .icon { flex-basis: 38px; height: 38px; font-size: 19px; border-radius: 10px; }
+    .tile.doc .t-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tile.doc .t-side .st { margin: 4px 0 0; }
     .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 10px; background: var(--accent); color: var(--accent-text); vertical-align: middle; margin-left: 6px; }
   </style>
 </head>
@@ -222,6 +258,92 @@ function ask(msg) {
 }
 function haptic() { if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged(); }
 
+/* ================= Даты, поиск, подсказки, черновики ================= */
+const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+const WEEKDAYS = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+function isoShift(days) {
+  const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+function dateLabel(iso) {
+  if (!iso) return 'Без даты';
+  if (iso === today()) return 'Сегодня';
+  if (iso === isoShift(-1)) return 'Вчера';
+  const [y, m, d] = iso.split('-').map(Number);
+  const wd = WEEKDAYS[new Date(y, m - 1, d).getDay()];
+  return `${d} ${MONTHS[m - 1]}${y !== new Date().getFullYear() ? ' ' + y : ''}, ${wd}`;
+}
+function plural(n, one, few, many) {
+  const a = n % 10, b = n % 100;
+  return a === 1 && b !== 11 ? one : a >= 2 && a <= 4 && (b < 12 || b > 14) ? few : many;
+}
+/* Список, разбитый по дням: «Сегодня», «Вчера», «10 ноября, понедельник» */
+function groupByDate(list, getDate, renderItem, sumOf) {
+  let html = '', cur = null, buf = '', total = 0, n = 0;
+  const flush = () => {
+    if (cur === null) return;
+    html += `<div class="date-head"><span>${dateLabel(cur)}</span><span>${n} ${plural(n, 'документ', 'документа', 'документов')}${sumOf && total ? ' · ' + fMoney(total) : ''}</span></div>` + buf;
+  };
+  list.forEach((x, i) => {
+    const d = getDate(x);
+    if (d !== cur) { flush(); cur = d; buf = ''; total = 0; n = 0; }
+    buf += renderItem(x, i); n++;
+    if (sumOf) total += sumOf(x) || 0;
+  });
+  flush();
+  return html;
+}
+const PERIODS = [['today', 'Сегодня'], ['week', '7 дней'], ['month', '30 дней'], ['custom', 'Свой период']];
+function periodRange(r) {
+  if (r.period === 'today') return { from: today(), to: today() };
+  if (r.period === 'month') return { from: isoShift(-29), to: today() };
+  if (r.period === 'custom') return { from: r.from || isoShift(-6), to: r.to || today() };
+  return { from: isoShift(-6), to: today() };
+}
+const chipsHtml = (list, cur, attr) =>
+  `<div class="chips">${list.map(([k, l]) => `<button class="chip ${k === cur ? 'on' : ''}" data-${attr}="${k}">${l}</button>`).join('')}</div>`;
+const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/ё/g, 'е');
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* нет хранилища */ } }
+function lsDel(k) { try { localStorage.removeItem(k); } catch (e) { /* нет хранилища */ } }
+
+/* Подсказки: показываются один раз на каждом экране, потом — по кнопке «?» */
+const HELP = {
+  units: ['С чего начать', 'Выберите, где работаете.<br>«ООО «Виктория»» — данные прямо из iiko: товары, остатки, документы.<br>«Геншин кафе» — учёт внутри приложения.'],
+  ikDeps: ['Заведения', 'Выберите заведение. У каждого свои склады: бар, кухня, хозтовары.'],
+  ikHome: ['Главный экран заведения', '<ol><li>Синие кнопки — создать документ: приход товара, списание или инвентаризацию.</li><li>Поиск — быстро узнать, сколько товара на складах.</li><li>«Журнал документов» — всё, что было, по дням.</li></ol>Всё, что вы отправляете, попадает в iiko <b style="display:inline">непроведённым</b>: его проверяют и проводят в iikoOffice.'],
+  ikItems: ['Номенклатура', 'Все товары из iiko и сколько их сейчас на складах заведения. Ищите по названию, группе или артикулу.'],
+  ikStock: ['Остатки', 'Сколько товара на складе на выбранную дату. Можно смотреть по одному складу или по всем сразу. Красным — товары в минусе: обычно это значит, что не заведён приход.'],
+  ikJournal: ['Журнал документов', 'Все приходы и списания заведения из iiko и инвентаризации из приложения — по дням. Сверху выберите период, ниже — поиск по номеру, поставщику или товару. Нажмите на документ, чтобы посмотреть состав или повторить его.'],
+  ikDocs: ['Документы', 'Документы этого вида по дням. Кнопка сверху создаёт новый.'],
+  ikDocView: ['Состав документа', '«Повторить» создаст новый документ с теми же товарами и количествами — удобно для регулярных закупок. Изменить или провести документ можно в iikoOffice.'],
+  ikDoc: (r) => r.type === 'invoice'
+    ? ['Приход товара (накладная)', '<ol><li>Выберите склад, куда пришёл товар, и поставщика.</li><li>Добавьте товары: начните вводить название и выберите из подсказок.</li><li>Количество — в единицах товара (кг, л, шт), цена — за одну такую единицу.</li><li>Нажмите «Отправить в iiko».</li></ol>Черновик сохраняется сам — можно выйти и вернуться позже.']
+    : r.type === 'writeoff'
+      ? ['Списание', 'Списание — когда товар ушёл со склада не через продажу: порча, питание персонала, представительские.<ol><li>Выберите склад и статью.</li><li>Добавьте товары и количество.</li><li>Нажмите «Отправить в iiko».</li></ol>Рядом с товаром видно, сколько его на складе. Черновик сохраняется сам.']
+      : ['Инвентаризация', 'Пересчёт склада: введите, сколько товара реально лежит. «По учёту» — сколько должно быть по iiko. Пустые строки не отправляются. Черновик сохраняется сам — считать можно в несколько заходов.'],
+  ikExport: ['Выгрузка', 'Скачать остатки или номенклатуру в Excel. Если на телефоне файл не скачивается — нажмите «Копировать» и вставьте в таблицу.'],
+  unit: ['Учёт в приложении', 'Здесь учёт ведётся прямо в приложении: заведите товары в «Номенклатуре», дальше — накладные, списания и инвентаризации. Остатки посчитаются сами.'],
+  invoices: ['Накладные', 'Приход товара по дням. Кнопка сверху — новая накладная, поиск — по номеру, поставщику или товару.'],
+  writeoffs: ['Списания', 'Расход товара по дням. Кнопка сверху — новое списание.'],
+  counts: ['Инвентаризации', 'Пересчёты склада по дням. После инвентаризации остатки становятся равны фактическим.'],
+};
+function helpFor(r) { const x = HELP[r.view]; return typeof x === 'function' ? x(r) : x; }
+
+/* Черновики документов iiko: сохраняются в телефоне, пока документ не отправлен */
+const draftKey = (type) => `draft_${IK.dep ? IK.dep.id : ''}_${type}`;
+function loadDraft(type) { try { return JSON.parse(lsGet(draftKey(type)) || 'null'); } catch (e) { return null; } }
+function saveDraft(type, d) { lsSet(draftKey(type), JSON.stringify({ ...d, savedAt: Date.now() })); }
+function clearDraft(type) { lsDel(draftKey(type)); }
+function draftSize(type, d) {
+  if (!d) return 0;
+  return type === 'inventory' ? Object.keys(d.actual || {}).length : (d.lines || []).filter(l => (l.label || '').trim() || l.qty).length;
+}
+function draftBanner(type, d) {
+  const when = d.savedAt ? new Date(d.savedAt).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '';
+  return `<div class="banner">📝 <span>Продолжаем черновик${when ? ' от ' + when : ''}</span><button class="btn sm ghost" id="dropDraft">Начать заново</button></div>`;
+}
+
 /* ================= Состояние и навигация ================= */
 let unitKey = null;
 let data = null;            // { items: [], invoices: [], counts: [] }
@@ -238,6 +360,20 @@ function render() {
   if (inTelegram) stack.length > 1 ? tg.BackButton.show() : tg.BackButton.hide();
   const backLink = (!inTelegram && stack.length > 1) ? '<button class="back" id="back">‹ Назад</button>' : '';
   $app.innerHTML = backLink;
+  const help = helpFor(r);
+  if (help) {
+    const seenKey = 'help_' + r.view + (r.type ? '_' + r.type : '');
+    const card = document.createElement('div');
+    card.className = 'help';
+    card.innerHTML = `<b>💡 ${help[0]}</b>${help[1]}<br><button class="btn sm ghost">Понятно</button>`;
+    card.style.display = lsGet(seenKey) ? 'none' : '';
+    card.querySelector('button').onclick = () => { card.style.display = 'none'; lsSet(seenKey, '1'); };
+    $app.appendChild(card);
+    const fab = document.createElement('button');
+    fab.className = 'help-fab'; fab.textContent = '?'; fab.title = 'Подсказка';
+    fab.onclick = () => { const hidden = card.style.display === 'none'; card.style.display = hidden ? '' : 'none'; if (hidden) window.scrollTo(0, 0); };
+    $app.appendChild(fab);
+  }
   const holder = document.createElement('div');
   $app.appendChild(holder);
   VIEWS[r.view](holder, r);
@@ -429,24 +565,43 @@ VIEWS.item = (el, r) => {
 };
 
 /* ---------- Накладные ---------- */
-VIEWS.invoices = (el) => {
-  const docs = [...data.invoices].sort((a, b) => b.date.localeCompare(a.date) || b.created - a.created);
+/* Общий список документов «по дням» с поиском (учёт внутри приложения) */
+function localDocList(el, r, o) {
+  const docs = [...o.docs].sort((a, b) => b.date.localeCompare(a.date) || b.created - a.created);
   el.innerHTML = `
-    <h1>Накладные</h1>
-    <p class="sub">Приход товара · ${h(UNITS[unitKey].title)}</p>
-    <button class="btn wide" id="add" style="margin:0 0 12px">+ Новая накладная</button>
-    ${docs.length ? docs.map(d => `
-      <button class="tile" data-id="${d.id}">
-        <span class="t-main"><div class="t-name">№ ${h(d.number || '—')} от ${fDate(d.date)}</div>
-          <div class="t-desc">${h(d.supplier || 'Поставщик не указан')} · позиций: ${d.lines.length}</div></span>
-        <span class="t-side"><b>${fMoney(invoiceTotal(d))}</b></span>
-      </button>`).join('') : '<div class="empty">Накладных пока нет</div>'}`;
+    <h1>${o.title}</h1>
+    <p class="sub">${o.sub} · ${h(UNITS[unitKey].title)}</p>
+    <button class="btn wide" id="add" style="margin:0 0 12px">${o.addLabel}</button>
+    ${docs.length ? `<div class="search"><input id="q" type="search" placeholder="${o.searchHint}" value="${h(r.q || '')}"></div>` : ''}
+    <div id="list"></div>`;
+  const list = el.querySelector('#list');
+  const draw = () => {
+    const q = norm(r.q).trim();
+    const shown = q ? docs.filter(d => norm(o.text(d) + ' ' + d.lines.map(l => itemName(l.itemId)).join(' ')).includes(q)) : docs;
+    list.innerHTML = shown.length ? groupByDate(shown, d => d.date, o.card, o.sum)
+      : `<div class="empty">${docs.length ? 'Ничего не найдено' : o.empty}</div>`;
+    list.querySelectorAll('[data-id]').forEach(b => b.onclick = () => go(o.view, { id: b.dataset.id }));
+  };
+  const q = el.querySelector('#q');
+  if (q) q.oninput = (e) => { r.q = e.target.value; draw(); };
   el.querySelector('#add').onclick = () => {
     if (!data.items.length) return notify('Сначала добавьте позиции в номенклатуру.');
-    go('invoice', { id: null });
+    go(o.view, { id: null });
   };
-  el.querySelectorAll('[data-id]').forEach(b => b.onclick = () => go('invoice', { id: b.dataset.id }));
-};
+  draw();
+}
+
+VIEWS.invoices = (el, r) => localDocList(el, r, {
+  title: 'Накладные', sub: 'Приход товара', addLabel: '+ Новая накладная', view: 'invoice', docs: data.invoices,
+  searchHint: 'Номер, поставщик или товар', empty: 'Накладных пока нет. Нажмите «+ Новая накладная».',
+  text: (d) => `${d.number} ${d.supplier} ${d.comment || ''}`, sum: invoiceTotal,
+  card: (d) => `
+      <button class="tile" data-id="${d.id}">
+        <span class="t-main"><div class="t-name">${h(d.supplier || 'Поставщик не указан')}</div>
+          <div class="t-desc">№ ${h(d.number || '—')} · позиций: ${d.lines.length}</div></span>
+        <span class="t-side"><b>${fMoney(invoiceTotal(d))}</b></span>
+      </button>`,
+});
 
 VIEWS.invoice = (el, r) => {
   const existing = r.id && data.invoices.find(d => d.id === r.id);
@@ -549,26 +704,20 @@ VIEWS.invoice = (el, r) => {
 /* ---------- Инвентаризация ---------- */
 const countDiffs = (d) => d.lines.filter(l => l.actual !== l.expected).length;
 
-VIEWS.counts = (el) => {
-  const docs = [...data.counts].sort((a, b) => b.date.localeCompare(a.date) || b.created - a.created);
-  el.innerHTML = `
-    <h1>Инвентаризация</h1>
-    <p class="sub">Пересчёт остатков · ${h(UNITS[unitKey].title)}</p>
-    <button class="btn wide" id="add" style="margin:0 0 12px">+ Новая инвентаризация</button>
-    ${docs.length ? docs.map(d => {
-      const diff = countDiffs(d);
-      return `
+VIEWS.counts = (el, r) => localDocList(el, r, {
+  title: 'Инвентаризация', sub: 'Пересчёт остатков', addLabel: '+ Новая инвентаризация', view: 'count', docs: data.counts,
+  searchHint: 'Товар или комментарий', empty: 'Инвентаризаций пока нет. Нажмите «+ Новая инвентаризация».',
+  text: (d) => d.comment || '',
+  card: (d) => {
+    const diff = countDiffs(d);
+    return `
       <button class="tile" data-id="${d.id}">
-        <span class="t-main"><div class="t-name">Инвентаризация от ${fDate(d.date)}</div>
+        <span class="t-main"><div class="t-name">Инвентаризация</div>
           <div class="t-desc">Посчитано позиций: ${d.lines.length}</div></span>
         <span class="t-side ${diff ? 'minus' : 'plus'}">${diff ? 'Расхождений: ' + diff : 'Без расхождений'}</span>
-      </button>`; }).join('') : '<div class="empty">Инвентаризаций пока нет</div>'}`;
-  el.querySelector('#add').onclick = () => {
-    if (!data.items.length) return notify('Сначала добавьте позиции в номенклатуру.');
-    go('count', { id: null });
-  };
-  el.querySelectorAll('[data-id]').forEach(b => b.onclick = () => go('count', { id: b.dataset.id }));
-};
+      </button>`;
+  },
+});
 
 VIEWS.count = (el, r) => {
   const existing = r.id && data.counts.find(d => d.id === r.id);
@@ -709,24 +858,17 @@ VIEWS.report = (el, r) => {
 };
 
 /* ---------- Списания ---------- */
-VIEWS.writeoffs = (el) => {
-  const docs = [...data.writeoffs].sort((a, b) => b.date.localeCompare(a.date) || b.created - a.created);
-  el.innerHTML = `
-    <h1>Списания</h1>
-    <p class="sub">Расход товара · ${h(UNITS[unitKey].title)}</p>
-    <button class="btn wide" id="add" style="margin:0 0 12px">+ Новое списание</button>
-    ${docs.length ? docs.map(d => `
+VIEWS.writeoffs = (el, r) => localDocList(el, r, {
+  title: 'Списания', sub: 'Расход товара', addLabel: '+ Новое списание', view: 'writeoff', docs: data.writeoffs,
+  searchHint: 'Причина, комментарий или товар', empty: 'Списаний пока нет. Нажмите «+ Новое списание».',
+  text: (d) => `${d.reason} ${d.comment || ''}`, sum: invoiceTotal,
+  card: (d) => `
       <button class="tile" data-id="${d.id}">
-        <span class="t-main"><div class="t-name">${h(d.reason)} · ${fDate(d.date)}</div>
+        <span class="t-main"><div class="t-name">${h(d.reason)}</div>
           <div class="t-desc">${h(d.comment || '')}${d.comment ? ' · ' : ''}позиций: ${d.lines.length}</div></span>
         <span class="t-side"><b>${fMoney(invoiceTotal(d))}</b></span>
-      </button>`).join('') : '<div class="empty">Списаний пока нет</div>'}`;
-  el.querySelector('#add').onclick = () => {
-    if (!data.items.length) return notify('Сначала добавьте позиции в номенклатуру.');
-    go('writeoff', { id: null });
-  };
-  el.querySelectorAll('[data-id]').forEach(b => b.onclick = () => go('writeoff', { id: b.dataset.id }));
-};
+      </button>`,
+});
 
 VIEWS.writeoff = (el, r) => {
   const existing = r.id && data.writeoffs.find(d => d.id === r.id);
@@ -1013,32 +1155,38 @@ VIEWS.ikDeps = (el) => withLoading(el, async () => {
 });
 
 VIEWS.ikHome = (el) => {
+  const drafts = Object.keys(DOC_TYPES).map(k => [k, loadDraft(k)]).filter(([k, d]) => draftSize(k, d));
+  const tile = (go_, icon, name, desc) => `
+    <button class="tile" data-go="${go_}">
+      <span class="icon">${icon}</span>
+      <span class="t-main"><div class="t-name">${name}</div><div class="t-desc">${desc}</div></span>
+      <span class="arrow">›</span>
+    </button>`;
   el.innerHTML = `
     <h1>${h(IK.dep.name)}</h1>
     <p class="sub">${h(UNITS[unitKey].title)} · данные из iiko</p>
-    <button class="tile" data-go="ikItems">
-      <span class="icon">📦</span>
-      <span class="t-main"><div class="t-name">Номенклатура</div><div class="t-desc">Товары из iiko с остатками</div></span>
-      <span class="arrow">›</span>
-    </button>
-    <button class="tile" data-go="ikStock">
-      <span class="icon">📊</span>
-      <span class="t-main"><div class="t-name">Остатки</div><div class="t-desc">По складам: ${depStores().map(s => h(s.name)).join(', ')}</div></span>
-      <span class="arrow">›</span>
-    </button>
-    ${Object.entries(DOC_TYPES).map(([k, t]) => `
-      <button class="tile" data-docs="${k}">
-        <span class="icon">${t.icon}</span>
-        <span class="t-main"><div class="t-name">${t.title}</div><div class="t-desc">${t.desc} · отправка в iiko</div></span>
-        <span class="arrow">›</span>
-      </button>`).join('')}
-    <button class="tile" data-go="ikExport">
-      <span class="icon">📥</span>
-      <span class="t-main"><div class="t-name">Выгрузка в Excel</div><div class="t-desc">Остатки и номенклатура из iiko</div></span>
-      <span class="arrow">›</span>
-    </button>`;
+    ${drafts.map(([k, d]) => `
+      <div class="banner">📝 <span>Незаконченный документ: <b>${DOC_TYPES[k].name.toLowerCase()}</b>, ${draftSize(k, d)} поз.</span>
+        <button class="btn sm" data-new="${k}">Продолжить</button></div>`).join('')}
+    <form class="search" id="sf"><input id="q" type="search" placeholder="Найти товар и его остаток" enterkeyhint="search"></form>
+    <div class="section-title">Создать документ</div>
+    <div class="qa">
+      <button data-new="invoice"><span class="e">🧾</span>Приход<br>(накладная)</button>
+      <button data-new="writeoff"><span class="e">📤</span>Списание</button>
+      <button data-new="inventory"><span class="e">📋</span>Инвентари&shy;зация</button>
+    </div>
+    <div class="section-title">Посмотреть</div>
+    ${tile('ikStock', '📊', 'Остатки', 'Сейчас или на любую дату')}
+    ${tile('ikJournal', '🗂', 'Журнал документов', 'Все документы по дням')}
+    ${tile('ikItems', '📦', 'Номенклатура', 'Товары, артикулы, единицы')}
+    ${tile('ikExport', '📥', 'Выгрузка в Excel', 'Остатки и товары таблицей')}`;
   el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
-  el.querySelectorAll('[data-docs]').forEach(b => b.onclick = () => go('ikDocs', { type: b.dataset.docs }));
+  el.querySelectorAll('[data-new]').forEach(b => b.onclick = () => go('ikDoc', { type: b.dataset.new }));
+  el.querySelector('#sf').onsubmit = (e) => {
+    e.preventDefault();
+    const q = el.querySelector('#q').value.trim();
+    go('ikItems', { q });
+  };
 };
 
 /* ---------- Документы в iiko (создаются непроведёнными) ---------- */
@@ -1061,8 +1209,12 @@ function goodsIndex() {
   const count = {};
   goods.forEach(p => { count[p.name] = (count[p.name] || 0) + 1; });
   const byLabel = new Map();
-  goods.forEach(p => byLabel.set(count[p.name] > 1 && p.num ? `${p.name} · арт. ${p.num}` : p.name, p));
-  return (IK.goodsIdx = { byLabel });
+  const labelOf = new Map();
+  goods.forEach(p => {
+    const label = count[p.name] > 1 && p.num ? `${p.name} · арт. ${p.num}` : p.name;
+    byLabel.set(label, p); labelOf.set(p.id, label);
+  });
+  return (IK.goodsIdx = { byLabel, labelOf });
 }
 
 function sentDone(t, res) {
@@ -1070,22 +1222,142 @@ function sentDone(t, res) {
     + (res.warning ? '\n\nПредупреждение iiko: ' + res.warning : ''));
 }
 
-VIEWS.ikDocs = (el, r) => withLoading(el, async () => {
-  const t = DOC_TYPES[r.type];
-  const hist = await api(`/api/documents?type=${r.type}&stores=${depStores().map(s => s.id).join(',')}`);
+const KIND_INFO = { invoice: ['🧾', 'Приход'], writeoff: ['📤', 'Списание'], inventory: ['📋', 'Инвентаризация'] };
+const storeNames = (ids) => (ids || []).map(id => (IK.meta.stores.find(s => s.id === id) || {}).name || '').filter(Boolean).join(', ');
+
+/* Сервер старой версии не знает /api/journal — тогда показываем только отправленное из приложения */
+async function legacyJournal(ids) {
+  const rows = await api(`/api/documents?stores=${ids.join(',')}`);
+  return rows.map(x => ({ kind: x.type, id: x.type + x.number, number: x.number, date: x.date, status: 'NEW',
+    supplier: x.supplier || '', account: x.account || '', stores: [x.storeId], sum: x.total == null ? null : x.total,
+    comment: x.comment || '', items: x.items || [], lines: x.lines }));
+}
+
+VIEWS.ikJournal = (el, r) => {
+  if (!r.period) r.period = 'week';
+  if (!r.kind) r.kind = r.type || 'all';
+  const KINDS = [['all', 'Все'], ['invoice', '🧾 Приходы'], ['writeoff', '📤 Списания'], ['inventory', '📋 Инвентаризации']];
+  const ids = depStores().map(s => s.id);
   el.innerHTML = `
-    <h1>${t.title}</h1>
-    <p class="sub">${h(IK.dep.name)} · документы уходят в iiko без проведения</p>
-    <button class="btn wide" id="add" style="margin:0 0 12px">${t.add}</button>
-    <div class="section-title">Отправлено из приложения</div>
-    ${hist.length ? hist.map(d => `
-      <div class="tile static">
-        <span class="t-main"><div class="t-name">№ ${h(d.number)} · ${fDate(d.date)}</div>
-          <div class="t-desc">${h(d.store)}${d.supplier ? ' · ' + h(d.supplier) : ''}${d.account ? ' · ' + h(d.account) : ''} · строк: ${d.lines}</div></span>
-        ${d.total != null ? `<span class="t-side"><b>${fMoney(d.total)}</b></span>` : ''}
-      </div>`).join('') : '<div class="empty">Пока ничего не отправлено</div>'}
-    <p class="hint" style="margin-top:14px">Документы из приложения в iiko имеют номер, начинающийся с «TG». Проверьте их в iikoOffice и проведите там.</p>`;
-  el.querySelector('#add').onclick = () => go('ikDoc', { type: r.type });
+    <h1>${r.type ? DOC_TYPES[r.type].title : 'Журнал документов'}</h1>
+    <p class="sub">${h(IK.dep.name)} · по дням, из iiko</p>
+    ${r.type ? `<button class="btn wide" id="add" style="margin:0 0 12px">${DOC_TYPES[r.type].add}</button>` : ''}
+    <div class="search"><input id="q" type="search" placeholder="Номер, поставщик, статья или товар" value="${h(r.q || '')}"></div>
+    ${chipsHtml(PERIODS, r.period, 'period')}
+    <div class="grid2" id="custom" style="margin:-4px 0 10px;${r.period === 'custom' ? '' : 'display:none'}">
+      <div><label>С</label><input id="from" type="date" value="${h(periodRange(r).from)}"></div>
+      <div><label>По</label><input id="to" type="date" value="${h(periodRange(r).to)}"></div>
+    </div>
+    ${r.type ? '' : chipsHtml(KINDS, r.kind, 'kind')}
+    <div id="list"></div>`;
+  const list = el.querySelector('#list');
+  let docs = [], legacy = false;
+  const card = (d, i) => {
+    const [icon, title] = KIND_INFO[d.kind] || ['📄', 'Документ'];
+    const who = d.supplier || d.account || '';
+    const done = d.status === 'PROCESSED';
+    return `
+      <button class="tile doc" data-i="${i}">
+        <span class="icon">${icon}</span>
+        <span class="t-main"><div class="t-name">${h(who || title)}</div>
+          <div class="t-desc">${who ? title + ' · ' : ''}№ ${h(d.number || '—')}${storeNames(d.stores) ? ' · ' + h(storeNames(d.stores)) : ''}</div></span>
+        <span class="t-side">${d.sum ? '<b>' + fMoney(d.sum) + '</b><br>' : ''}<span class="st ${done ? 'done' : 'new'}">${done ? 'Проведён' : 'Не проведён'}</span>${String(d.number).startsWith('TG') ? '<br><span class="st tg">из приложения</span>' : ''}</span>
+      </button>`;
+  };
+  let shown = [];
+  const draw = () => {
+    const names = Object.fromEntries((IK.products || []).map(p => [p.id, p.name]));
+    const q = norm(r.q).trim();
+    shown = docs.filter(d => r.kind === 'all' || d.kind === r.kind);
+    if (q) shown = shown.filter(d => norm([d.number, d.incomingNumber, d.supplier, d.account, d.comment,
+      ...(d.items || []).map(i => names[i.productId])].join(' ')).includes(q));
+    list.innerHTML = (legacy ? '<div class="banner">ℹ️ <span>Сейчас видны только документы из приложения. Чтобы видеть все документы iiko, перезапустите сервер (start.cmd).</span></div>' : '')
+      + (shown.length ? groupByDate(shown, d => d.date, card, d => d.sum)
+        : `<div class="empty">${docs.length ? 'Ничего не найдено — измените поиск или период' : 'За этот период документов нет'}</div>`);
+    list.querySelectorAll('[data-i]').forEach(b => b.onclick = () => go('ikDocView', { doc: shown[+b.dataset.i] }));
+  };
+  const load = async () => {
+    list.innerHTML = '<p class="hint">Загрузка из iiko…</p>';
+    const { from, to } = periodRange(r);
+    try {
+      await ikProducts();
+      try {
+        docs = await api(`/api/journal?from=${from}&to=${to}&stores=${ids.join(',')}`);
+        legacy = false;
+      } catch (e) {
+        if (!/Not Found|Not Allowed|404|405/.test(e.message)) throw e;
+        docs = (await legacyJournal(ids)).filter(d => d.date >= from && d.date <= to);
+        legacy = true;
+      }
+      draw();
+    } catch (e) {
+      list.innerHTML = `<div class="empty" style="white-space:pre-line">${h(e.message)}</div><button class="btn ghost wide" id="retry">Повторить</button>`;
+      list.querySelector('#retry').onclick = load;
+    }
+  };
+  el.querySelector('#q').oninput = (e) => { r.q = e.target.value; draw(); };
+  el.querySelectorAll('[data-period]').forEach(b => b.onclick = () => {
+    r.period = b.dataset.period;
+    el.querySelectorAll('[data-period]').forEach(x => x.classList.toggle('on', x === b));
+    el.querySelector('#custom').style.display = r.period === 'custom' ? '' : 'none';
+    load();
+  });
+  el.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => {
+    r.kind = b.dataset.kind;
+    el.querySelectorAll('[data-kind]').forEach(x => x.classList.toggle('on', x === b));
+    draw();
+  });
+  ['from', 'to'].forEach(f => el.querySelector('#' + f).onchange = (e) => { r[f] = e.target.value; load(); });
+  const add = el.querySelector('#add');
+  if (add) add.onclick = () => go('ikDoc', { type: r.type });
+  load();
+};
+VIEWS.ikDocs = VIEWS.ikJournal;
+
+VIEWS.ikDocView = (el, r) => withLoading(el, async () => {
+  const d = r.doc;
+  await ikProducts();
+  const P = Object.fromEntries(IK.products.map(p => [p.id, p]));
+  const [icon, title] = KIND_INFO[d.kind] || ['📄', 'Документ'];
+  const done = d.status === 'PROCESSED';
+  const items = d.items || [];
+  const total = items.reduce((a, i) => a + (i.sum || (i.price ? i.amount * i.price : 0)), 0);
+  const canRepeat = d.kind !== 'inventory' && items.length;
+  el.innerHTML = `
+    <h1>${icon} ${title}</h1>
+    <p class="sub">${h(IK.dep.name)} · ${dateLabel(d.date)}</p>
+    <div class="kv">
+      <div>Номер</div><div>${h(d.number || '—')}${d.incomingNumber ? ' (у поставщика ' + h(d.incomingNumber) + ')' : ''}</div>
+      <div>Дата</div><div>${fDate(d.date)}</div>
+      <div>Склад</div><div>${h(storeNames(d.stores) || '—')}</div>
+      ${d.supplier ? `<div>Поставщик</div><div>${h(d.supplier)}</div>` : ''}
+      ${d.account ? `<div>Статья</div><div>${h(d.account)}</div>` : ''}
+      <div>Статус</div><div><span class="st ${done ? 'done' : 'new'}" style="margin:0">${done ? 'Проведён' : 'Не проведён'}</span></div>
+      ${d.comment ? `<div>Комментарий</div><div>${h(d.comment)}</div>` : ''}
+    </div>
+    <div class="section-title">Товары · ${items.length || d.lines || 0}</div>
+    ${items.length ? items.map(i => {
+      const p = P[i.productId] || { name: '(товар не найден)', unit: '' };
+      const sum = i.sum || (i.price ? i.amount * i.price : 0);
+      return `<div class="rep-row">
+        <span class="t-main"><div>${h(p.name)}</div>${i.price ? `<div class="cnt-meta">${fMoney(i.price)} за ${h(p.unit)}</div>` : ''}</span>
+        <span class="t-side"><b>${fQty(i.amount)}</b> ${h(p.unit)}${sum ? `<div class="cnt-meta">${fMoney(sum)}</div>` : ''}</span>
+      </div>`;
+    }).join('') : '<div class="empty">Состав не сохранён — откройте документ в iikoOffice</div>'}
+    ${total ? `<div class="total"><span>Итого</span><span>${fMoney(total)}</span></div>` : ''}
+    ${canRepeat ? '<button class="btn wide" id="repeat">🔁 Повторить как новый документ</button>' : ''}
+    <p class="hint" style="margin-top:14px">Изменить или провести документ можно в iikoOffice.</p>`;
+  const rep = el.querySelector('#repeat');
+  if (rep) rep.onclick = () => {
+    const gi = goodsIndex();
+    const lines = items.map(i => ({ label: gi.labelOf.get(i.productId) || '', qty: String(i.amount),
+      price: d.kind === 'invoice' && i.price ? String(i.price) : '' })).filter(l => l.label);
+    if (!lines.length) return notify('В этом документе нет товаров, которые можно повторить: здесь только заготовки или блюда, либо товары удалены из iiko.');
+    if (lines.length < items.length) toast(`Перенесено ${lines.length} из ${items.length}: остальные — не товары или удалены`);
+    const storeId = depStores().some(s => s.id === (d.stores || [])[0]) ? d.stores[0] : lastStore();
+    go('ikDoc', { type: d.kind, prefill: { storeId, date: today(), supplier: d.supplier || '', incomingNumber: '',
+      comment: '', accountId: d.accountId || '', lines } });
+  };
 });
 
 VIEWS.ikDoc = (el, r) => r.type === 'inventory' ? ikInventoryView(el, r) : withLoading(el, async () => {
@@ -1094,11 +1366,18 @@ VIEWS.ikDoc = (el, r) => r.type === 'inventory' ? ikInventoryView(el, r) : withL
   const [refs] = await Promise.all([ikRefs(), ikProducts()]);
   const gi = goodsIndex();
   if (!r.draft) {
-    r.draft = { storeId: lastStore(), date: today(), supplier: '', incomingNumber: '', comment: '',
+    const saved = r.prefill ? null : loadDraft(r.type);
+    if (saved && draftSize(r.type, saved)) { r.draft = saved; r.restored = true; }
+    else r.draft = r.prefill || { storeId: lastStore(), date: today(), supplier: '', incomingNumber: '', comment: '',
                 accountId: (refs.writeoffAccounts[0] || {}).id || '', lines: [{ label: '', qty: '', price: '' }] };
+    if (!depStores().some(s => s.id === r.draft.storeId)) r.draft.storeId = lastStore();
+    if (!r.draft.lines || !r.draft.lines.length) r.draft.lines = [{ label: '', qty: '', price: '' }];
+    if (r.prefill) saveDraft(r.type, r.draft);
   }
   const d = r.draft;
+  const persist = () => saveDraft(r.type, d);
   el.innerHTML = `
+    ${r.restored ? draftBanner(r.type, d) : ''}
     <h1>${t.name}</h1>
     <p class="sub">${h(IK.dep.name)} · уйдёт в iiko без проведения</p>
     <label>Склад</label>
@@ -1167,9 +1446,14 @@ VIEWS.ikDoc = (el, r) => r.type === 'inventory' ? ikInventoryView(el, r) : withL
 
   ['date', 'incomingNumber', 'accountId', 'supplier', 'comment'].forEach(f => {
     const inp = el.querySelector('#' + f);
-    if (inp) inp.oninput = inp.onchange = (e) => { d[f] = e.target.value; };
+    if (inp) inp.oninput = inp.onchange = (e) => { d[f] = e.target.value; persist(); };
   });
-  el.querySelector('#storeId').onchange = (e) => { d.storeId = e.target.value; rememberStore(d.storeId); loadStock(); };
+  el.querySelector('#storeId').onchange = (e) => { d.storeId = e.target.value; rememberStore(d.storeId); persist(); loadStock(); };
+  const drop = el.querySelector('#dropDraft');
+  if (drop) drop.onclick = async () => {
+    if (!(await ask('Удалить черновик и начать документ заново?'))) return;
+    clearDraft(r.type); r.draft = null; r.restored = false; r.prefill = null; render();
+  };
   linesEl.oninput = (e) => {
     const row = e.target.closest('.line'); if (!row) return;
     const l = d.lines[row.dataset.i];
@@ -1182,16 +1466,19 @@ VIEWS.ikDoc = (el, r) => r.type === 'inventory' ? ikInventoryView(el, r) : withL
     if (e.target.classList.contains('l-qty')) l.qty = e.target.value;
     if (e.target.classList.contains('l-price')) l.price = e.target.value;
     recalc();
+    persist();
   };
   linesEl.onclick = (e) => {
     if (!e.target.classList.contains('l-del')) return;
     d.lines.splice(+e.target.closest('.line').dataset.i, 1);
     if (!d.lines.length) d.lines.push({ label: '', qty: '', price: '' });
     drawLines();
+    persist();
   };
   el.querySelector('#addLine').onclick = () => {
     d.lines.push({ label: '', qty: '', price: '' });
     drawLines();
+    persist();
     const inputs = linesEl.querySelectorAll('.l-prod');
     inputs[inputs.length - 1].focus();
   };
@@ -1231,6 +1518,7 @@ VIEWS.ikDoc = (el, r) => r.type === 'inventory' ? ikInventoryView(el, r) : withL
     try {
       const res = await api('/api/documents/' + r.type, body);
       r.draft = null;
+      clearDraft(r.type);
       sentDone(t, res);
       back();
     } catch (e) {
@@ -1248,10 +1536,17 @@ function ikInventoryView(el, r) {
     const t = DOC_TYPES.inventory;
     await ikProducts();
     const goods = ikGoods(IK.products);
-    if (!r.draft) r.draft = { storeId: lastStore(), date: today(), comment: '', actual: {} };
+    if (!r.draft) {
+      const saved = loadDraft('inventory');
+      if (saved && draftSize('inventory', saved)) { r.draft = saved; r.restored = true; }
+      else r.draft = { storeId: lastStore(), date: today(), comment: '', actual: {} };
+      if (!depStores().some(s => s.id === r.draft.storeId)) r.draft.storeId = lastStore();
+    }
     const d = r.draft;
+    const persist = () => saveDraft('inventory', d);
     let expected = {}, withRows = new Set();
     el.innerHTML = `
+      ${r.restored ? draftBanner('inventory', d) : ''}
       <h1>Инвентаризация</h1>
       <p class="sub">${h(IK.dep.name)} · уйдёт в iiko без проведения</p>
       <label>Склад</label>
@@ -1306,17 +1601,24 @@ function ikInventoryView(el, r) {
       if (v === '') delete d.actual[row.dataset.id]; else d.actual[row.dataset.id] = v;
       row.querySelector('.d').innerHTML = diffText(row.dataset.id);
       updateCount();
+      persist();
     };
     el.querySelector('#q').oninput = drawRows;
-    el.querySelector('#comment').oninput = (e) => { d.comment = e.target.value; };
-    el.querySelector('#storeId').onchange = (e) => {
-      if (Object.keys(d.actual).length && !confirm('Смена склада очистит введённые количества. Продолжить?')) { e.target.value = d.storeId; return; }
-      d.storeId = e.target.value; d.actual = {}; rememberStore(d.storeId); loadExpected();
+    el.querySelector('#comment').oninput = (e) => { d.comment = e.target.value; persist(); };
+    el.querySelector('#storeId').onchange = async (e) => {
+      if (Object.keys(d.actual).length && !(await ask('Смена склада очистит введённые количества. Продолжить?'))) { e.target.value = d.storeId; return; }
+      d.storeId = e.target.value; d.actual = {}; rememberStore(d.storeId); persist(); loadExpected();
     };
-    el.querySelector('#date').onchange = (e) => { d.date = e.target.value || today(); loadExpected(); };
+    el.querySelector('#date').onchange = (e) => { d.date = e.target.value || today(); persist(); loadExpected(); };
     el.querySelector('#fill').onclick = () => {
       withRows.forEach(id => { if (d.actual[id] == null && goods.some(p => p.id === id)) d.actual[id] = String(Math.max(0, expected[id] || 0)); });
       drawRows();
+      persist();
+    };
+    const drop = el.querySelector('#dropDraft');
+    if (drop) drop.onclick = async () => {
+      if (!(await ask('Удалить черновик и начать инвентаризацию заново?'))) return;
+      clearDraft('inventory'); r.draft = null; r.restored = false; render();
     };
     el.querySelector('#send').onclick = async (ev) => {
       if (!d.date) return notify('Укажите дату');
@@ -1335,6 +1637,7 @@ function ikInventoryView(el, r) {
       try {
         const res = await api('/api/documents/inventory', { storeId: d.storeId, date: d.date, comment: d.comment, items });
         r.draft = null;
+        clearDraft('inventory');
         sentDone(t, res);
         back();
       } catch (e) {
@@ -1354,13 +1657,13 @@ VIEWS.ikItems = (el, r) => withLoading(el, async () => {
   el.innerHTML = `
     <h1>Номенклатура</h1>
     <p class="sub">${h(IK.dep.name)} · из iiko · ${goods.length} товаров</p>
-    <div class="toolbar"><input id="q" type="search" placeholder="Название, группа или артикул" value="${h(r.q || '')}"></div>
+    <div class="search"><input id="q" type="search" placeholder="Название, группа или артикул" value="${h(r.q || '')}"></div>
     <div id="list"></div>`;
   const list = el.querySelector('#list');
   const LIMIT = 150;
   const draw = () => {
-    const q = (r.q || '').toLowerCase().trim();
-    const items = goods.filter(p => !q || p.name.toLowerCase().includes(q) || p.group.toLowerCase().includes(q) || p.num.toLowerCase().includes(q));
+    const q = norm(r.q).trim();
+    const items = goods.filter(p => !q || norm(p.name + ' ' + p.group + ' ' + p.num).includes(q));
     list.innerHTML = items.slice(0, LIMIT).map(p => `
       <div class="tile static">
         <span class="t-main"><div class="t-name">${h(p.name)}</div>
