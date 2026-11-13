@@ -41,11 +41,11 @@
     .t-side { text-align: right; font-size: 14px; white-space: nowrap; }
     .arrow { color: var(--hint); font-size: 22px; }
     .toolbar { display: flex; gap: 8px; margin-bottom: 12px; }
-    input, select {
+    input, select, textarea {
       width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid transparent;
       background: var(--card); color: var(--text); font: inherit; outline: none;
     }
-    input:focus, select:focus { border-color: var(--accent); }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
     label { display: block; font-size: 13px; color: var(--hint); margin: 12px 0 4px; }
     .btn {
       padding: 12px 16px; border: 0; border-radius: 10px; font: inherit; font-weight: 600; cursor: pointer;
@@ -136,6 +136,20 @@
     .pick small { display: block; margin-top: 3px; color: var(--hint); font-size: 13px; line-height: 1.35; }
     .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; margin: 14px 0 10px; border-radius: 12px; background: var(--card); }
     .seg button { padding: 10px 6px; border: 0; border-radius: 10px; background: none; color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+    .seg.s3 { grid-template-columns: repeat(3, 1fr); }
+    .inv-row.no-ttk .t-main > div:first-child { color: var(--hint); }
+    .ttk-head { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 12px; margin: 12px 0; border-radius: 12px; background: var(--card); font-size: 14px; color: var(--hint); }
+    .ttk-head b { color: var(--text); }
+    .ttk-tech { white-space: pre-line; padding: 12px; border-radius: 12px; background: var(--card); font-size: 14px; }
+    .ttk-ed { display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 12px; margin-bottom: 6px; border-left: 4px solid transparent; border-radius: 12px; background: var(--card); }
+    .ttk-ed.bad { border-left-color: var(--danger); }
+    .ttk-ed .t-main { flex: 1; min-width: 0; }
+    .ttk-ed .amt { flex: 0 0 80px; width: 80px; margin: 0; padding: 8px; text-align: right; background: var(--bg); }
+    .ttk-ed .u { flex: 0 0 34px; font-size: 13px; color: var(--hint); }
+    .ttk-ed .ic { flex: 0 0 34px; height: 34px; padding: 0; border: 0; border-radius: 10px; background: var(--bg); color: var(--text); font-size: 15px; cursor: pointer; }
+    .ttk-diff { padding: 10px 12px; border-radius: 12px; background: var(--card); line-height: 1.7; }
+    .pick-list { max-height: 55vh; overflow-y: auto; }
+    textarea { width: 100%; box-sizing: border-box; font: inherit; }
     .seg button.on { background: var(--accent); color: var(--accent-text); }
     .seg small { font-weight: 500; opacity: .8; }
     .inv-tools { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; margin-top: 12px; }
@@ -1229,6 +1243,7 @@ VIEWS.ikHome = (el) => {
     <div class="section-title">Посмотреть</div>
     ${tile('ikStock', '📊', 'Остатки', 'Сейчас или на любую дату')}
     ${tile('ikJournal', '🗂', 'Журнал документов', 'Все документы по дням')}
+    ${tile('ikTtk', '📖', 'Техкарты', 'Блюда, заготовки, модификаторы — просмотр и изменение')}
     ${tile('ikItems', '📦', 'Номенклатура', 'Товары, артикулы, единицы')}
     ${tile('ikExport', '📥', 'Выгрузка в Excel', 'Остатки и товары таблицей')}`;
   el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
@@ -2237,6 +2252,258 @@ VIEWS.ikStock = (el, r) => {
   };
   load();
 };
+
+/* ---------- Техкарты: блюда, заготовки, модификаторы ---------- */
+const TTK_TABS = { DISH: 'Блюда', PREPARED: 'Заготовки', MODIFIER: 'Модификаторы' };
+const TTK_KIND = { DISH: 'Блюдо', PREPARED: 'Заготовка', MODIFIER: 'Модификатор', GOODS: 'Товар', SERVICE: 'Услуга' };
+const fAmt = (n) => (n || 0).toLocaleString('ru-RU', { maximumFractionDigits: 4 });
+const fRub = (n) => n == null ? '—' : (n >= 100 ? Math.round(n).toLocaleString('ru-RU') : n.toLocaleString('ru-RU', { maximumFractionDigits: 2 })) + ' ₽';
+const amtVal = (s) => isPlainNum(s) ? num(s) : calc(s);
+
+VIEWS.ikTtk = (el, r) => withLoading(el, async () => {
+  const [products, tc] = await Promise.all([ikProducts(), api('/api/techcards').catch(e => {
+    throw /Not Found|404/.test(e.message) ? new Error('Сервер ещё старой версии. Перезапустите start.cmd и откройте раздел снова.') : e;
+  })]);
+  const charts = tc.charts || {};
+  r.tab = r.tab || 'DISH';
+  r.open = r.open || new Set();
+  const all = products.filter(p => !p.deleted && TTK_TABS[p.type]);
+  el.innerHTML = `
+    <h1>Техкарты</h1>
+    <p class="sub">Из iiko · себестоимость примерная, по текущим ценам</p>
+    <div class="seg s3">${Object.entries(TTK_TABS).map(([k, l]) => `<button data-tab="${k}">${l}<br><small>${all.filter(p => p.type === k).length}</small></button>`).join('')}</div>
+    <div class="search"><input id="q" type="search" placeholder="Найти по названию" value="${h(r.q || '')}"></div>
+    <div id="rows"></div>`;
+  const rowsEl = el.querySelector('#rows');
+  const rowHtml = (p) => {
+    const c = charts[p.id];
+    return `<button class="inv-row ${c ? '' : 'no-ttk'}" data-id="${p.id}">
+      <span class="t-main"><div>${h(p.name)}</div>
+        <div class="cnt-meta">${norm(r.q).trim() ? h(p.group || 'без группы') + ' · ' : ''}${c ? `${c.n} ингр. · с ${fDate(c.dateFrom)}` : 'нет техкарты'}</div></span>
+      <span class="inv-val">${c && c.cost != null ? '≈ ' + fRub(c.cost) : ''}<small>${c && c.cost != null ? 'за 1 ' + h(p.unit) : ''}</small></span>
+    </button>`;
+  };
+  const draw = () => {
+    el.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b.dataset.tab === r.tab));
+    const q = norm(r.q).trim();
+    const list = all.filter(p => p.type === r.tab && (!q || norm(p.name + ' ' + p.group).includes(q))).sort(byKeys('group', 'name'));
+    if (q) {
+      rowsEl.innerHTML = list.slice(0, 200).map(rowHtml).join('') || '<div class="empty">Ничего не найдено</div>';
+      return;
+    }
+    const groups = new Map();
+    list.forEach(p => { const g = p.group || 'Без группы'; if (!groups.has(g)) groups.set(g, []); groups.get(g).push(p); });
+    let html = '';
+    groups.forEach((items, g) => {
+      const open = r.open.has(g), without = items.filter(p => !charts[p.id]).length;
+      html += `<button class="grp ${open ? 'open' : ''}" data-g="${h(g)}"><span>📁</span><span class="t-main">${h(g)}</span>
+        <span class="cnt">${items.length}${without ? ` · без ТТК ${without}` : ''}</span><span class="arrow">›</span></button>`;
+      if (open) html += `<div class="grp-body">${items.map(rowHtml).join('')}</div>`;
+    });
+    rowsEl.innerHTML = html || '<div class="empty">Здесь пусто</div>';
+  };
+  rowsEl.onclick = (e) => {
+    const g = e.target.closest('.grp');
+    if (g) { r.open.has(g.dataset.g) ? r.open.delete(g.dataset.g) : r.open.add(g.dataset.g); draw(); return; }
+    const row = e.target.closest('.inv-row');
+    if (row) go('ikTtkCard', { id: row.dataset.id });
+  };
+  el.querySelectorAll('.seg button').forEach(b => b.onclick = () => { r.tab = b.dataset.tab; draw(); });
+  el.querySelector('#q').oninput = (e) => { r.q = e.target.value; draw(); };
+  draw();
+});
+
+/* Выбор ингредиента: товары, заготовки, блюда */
+function pickIngredient(title, onPick) {
+  const list = IK.products.filter(p => !p.deleted && ['GOODS', 'PREPARED', 'DISH', 'MODIFIER'].includes(p.type));
+  const sh = openSheet(`<h2>${h(title)}</h2>
+    <div class="search"><input id="pq" type="search" placeholder="Начните вводить название" autocomplete="off"></div>
+    <div id="pl" class="pick-list"></div>`);
+  const pl = sh.el.querySelector('#pl'), pq = sh.el.querySelector('#pq');
+  const draw = () => {
+    const q = norm(pq.value).trim();
+    if (!q) { pl.innerHTML = '<p class="hint">Например: «сметана», «пф борщ», «лук»</p>'; return; }
+    const t = tokens(q);
+    const found = list.map(p => {
+      const n = norm(p.name);
+      const s = n.startsWith(q) ? 3 : n.includes(q) ? 2 : tokScore(t, tokens(p.name));
+      return [s, p];
+    }).filter(([s]) => s >= 0.6).sort((a, b) => b[0] - a[0] || (a[1].type === 'GOODS' ? -1 : 1) || a[1].name.localeCompare(b[1].name, 'ru')).slice(0, 60);
+    pl.innerHTML = found.map(([, p]) => `<button class="inv-row" data-id="${p.id}"><span class="t-main"><div>${h(p.name)}</div>
+      <div class="cnt-meta">${TTK_KIND[p.type] || ''} · ${h(p.group || 'без группы')}</div></span><span class="inv-val">${h(p.unit)}</span></button>`).join('')
+      || '<div class="empty">Ничего не найдено</div>';
+  };
+  pq.oninput = draw;
+  pl.onclick = (e) => { const b = e.target.closest('[data-id]'); if (b) { sh.close(); onPick(IK.products.find(p => p.id === b.dataset.id)); } };
+  draw();
+  if (!matchMedia('(pointer: coarse)').matches) pq.focus(); else setTimeout(() => pq.focus(), 250);
+}
+
+VIEWS.ikTtkCard = (el, r) => withLoading(el, async () => {
+  await ikProducts();
+  if (!r.data) r.data = await api('/api/techcard?product=' + encodeURIComponent(r.id));
+  const d = r.data, p = d.product, ch = d.chart;
+  const versions = [ch, ...(d.future || [])].filter(Boolean);
+  const chartFor = (day) => versions.filter(v => v.dateFrom <= day).pop() || null;
+  const cost = (items, out) => {
+    let s = 0, miss = 0;
+    items.forEach(i => { const a = i.amt != null ? amtVal(i.amt) : i.amountIn; if (i.price == null) miss++; else if (!isNaN(a)) s += a * i.price; });
+    return { per: s / (num(out) || 1), miss };
+  };
+  const usedHtml = () => d.usedIn.length ? `<div class="section-title">Используется в (${d.usedIn.length})</div>`
+    + d.usedIn.map(u => `<button class="inv-row" data-open="${u.id}"><span class="t-main"><div>${h(u.name)}</div>
+      <div class="cnt-meta">${TTK_KIND[u.type] || ''}</div></span><span class="inv-val">${fAmt(u.amountIn)} ${h(p.unit)}</span></button>`).join('') : '';
+  const bindOpen = () => el.querySelectorAll('[data-open]').forEach(b => b.onclick = () => go('ikTtkCard', { id: b.dataset.open }));
+
+  if (!r.ed) {   // ---------- просмотр ----------
+    const c = ch ? cost(ch.items, ch.assembledAmount) : null;
+    el.innerHTML = `
+      <h1>${h(p.name)}</h1>
+      <p class="sub">${TTK_KIND[p.type] || ''} · ${h(p.group || 'без группы')}</p>
+      ${(d.future || []).map(f => `<div class="banner">🗓 <span>С ${fDate(f.dateFrom)} уже запланирована новая версия техкарты (${f.items.length} ингр.)</span></div>`).join('')}
+      ${ch ? `
+        <div class="ttk-head"><span>Выход <b>${fAmt(ch.assembledAmount)} ${h(p.unit)}</b></span><span>Действует с <b>${fDate(ch.dateFrom)}</b></span>
+          <span>Себестоимость <b>≈ ${fRub(c.per)}</b>${c.miss ? ' <small>(не у всех есть цена)</small>' : ''}</span></div>
+        <div class="section-title">Состав · брутто</div>
+        ${ch.items.map(i => `<button class="inv-row" ${['PREPARED', 'DISH', 'MODIFIER'].includes(i.type) ? `data-open="${i.id}"` : ''}>
+          <span class="t-main"><div>${h(i.name)}${['PREPARED', 'DISH', 'MODIFIER'].includes(i.type) ? ' <span class="hint">›</span>' : ''}</div>
+            <div class="cnt-meta">${TTK_KIND[i.type] || ''}${i.amountMiddle !== i.amountIn || i.amountOut !== i.amountIn ? ` · нетто ${fAmt(i.amountMiddle)} · выход ${fAmt(i.amountOut)}` : ''}${i.price != null ? ' · ≈ ' + fRub(i.price * i.amountIn) : ''}</div></span>
+          <span class="inv-val">${fAmt(i.amountIn)} ${h(i.unit)}</span></button>`).join('') || '<div class="empty">Ингредиентов нет</div>'}
+        ${ch.technologyDescription ? `<div class="section-title">Технология</div><div class="ttk-tech">${h(ch.technologyDescription)}</div>` : ''}`
+      : '<div class="empty">У этой позиции нет техкарты</div>'}
+      ${usedHtml()}
+      <div class="inv-bar"><button class="btn" id="edit">${ch ? '✏️ Изменить техкарту' : '➕ Создать техкарту'}</button></div>`;
+    bindOpen();
+    el.querySelector('#edit').onclick = () => {
+      const base = chartFor(d.minDate);
+      r.ed = { date: d.minDate, out: String(base ? base.assembledAmount : 1).replace('.', ','), tech: base ? base.technologyDescription : '',
+        items: (base ? base.items : []).map(i => ({ ...i, amt: String(i.amountIn).replace('.', ',') })) };
+      render();
+    };
+    return;
+  }
+
+  // ---------- изменение ----------
+  const e_ = r.ed;
+  el.innerHTML = `
+    <h1>${h(p.name)}</h1>
+    <p class="sub">Изменение техкарты · в iiko уйдёт только после подтверждения</p>
+    <div class="grid2">
+      <div><label>Действует с</label><input id="date" type="date" min="${d.minDate}" value="${h(e_.date)}"></div>
+      <div><label>Выход, ${h(p.unit)}</label><input id="out" inputmode="decimal" value="${h(e_.out)}"></div>
+    </div>
+    <div class="section-title">Состав · брутто</div>
+    <div id="items"></div>
+    <button class="btn ghost wide" id="add">➕ Добавить ингредиент</button>
+    <label>Технология приготовления</label>
+    <textarea id="tech" rows="3" placeholder="Необязательно">${h(e_.tech)}</textarea>
+    <p class="hint">Количество можно писать выражением: «0,12+0,03». Нетто и выход строк пересчитаются в той же пропорции, что были.
+      Старая версия техкарты сохранится в iiko до выбранной даты, а копия — на компьютере.</p>
+    <div class="inv-bar"><span>Себест.<br><b id="cost">—</b></span><button class="btn ghost" id="cancel">Отмена</button><button class="btn" id="check">Проверить</button></div>`;
+  const itemsEl = el.querySelector('#items');
+  const drawCost = () => { const c = cost(e_.items, e_.out); el.querySelector('#cost').textContent = '≈ ' + fRub(c.per); };
+  const metaHtml = (i) => {
+    const v = amtVal(i.amt), bad = isNaN(v) || v <= 0;
+    return `${TTK_KIND[i.type] || ''}${i.replaced ? ' · вместо «' + h(i.replaced) + '»' : ''}${i.replaced && i.oldUnit && i.oldUnit !== i.unit ? ` · <span class="minus">⚠️ было в ${h(i.oldUnit)}, проверьте количество</span>` : ''}${i.price != null && !bad ? ' · ≈ ' + fRub(i.price * v) : ''}${!isPlainNum(i.amt) && !bad ? ' · = ' + fAmt(v) : ''}`;
+  };
+  const drawItems = () => {
+    itemsEl.innerHTML = e_.items.map((i, k) => {
+      const v = amtVal(i.amt), bad = isNaN(v) || v <= 0;
+      return `<div class="ttk-ed ${bad ? 'bad' : ''}" data-k="${k}">
+        <div class="t-main"><div>${h(i.name)}</div><div class="cnt-meta">${metaHtml(i)}</div></div>
+        <input class="amt" inputmode="decimal" value="${h(i.amt)}" data-k="${k}"><span class="u">${h(i.unit)}</span>
+        <button class="ic" data-rep="${k}" title="Заменить">🔁</button><button class="ic" data-del="${k}" title="Убрать">✕</button>
+      </div>`;
+    }).join('') || '<div class="empty">Добавьте ингредиенты</div>';
+    drawCost();
+  };
+  itemsEl.oninput = (ev) => {
+    const k = ev.target.dataset.k; if (k == null) return;
+    e_.items[k].amt = ev.target.value;
+    const v = amtVal(ev.target.value), row = ev.target.closest('.ttk-ed');
+    row.classList.toggle('bad', isNaN(v) || v <= 0);
+    row.querySelector('.cnt-meta').innerHTML = metaHtml(e_.items[k]);
+    drawCost();
+  };
+  itemsEl.onclick = (ev) => {
+    const rep = ev.target.dataset.rep, del = ev.target.dataset.del;
+    if (del != null) { e_.items.splice(+del, 1); drawItems(); }
+    if (rep != null) pickIngredient('Заменить «' + e_.items[rep].name + '» на…', (np) => {
+      if (np.id === p.id) return notify('Нельзя добавить позицию саму в себя');
+      const old = e_.items[rep];
+      e_.items[rep] = { ...old, id: np.id, name: np.name, unit: np.unit, type: np.type, price: null,
+        replaced: old.replaced || old.name, oldUnit: old.oldUnit || old.unit };
+      drawItems(); fetchPrice(e_.items[rep]);
+    });
+  };
+  const fetchPrice = async (it) => {   // цена нового ингредиента — из его карточки
+    try {
+      const x = await api('/api/techcard?product=' + encodeURIComponent(it.id));
+      it.price = x.cost;
+    } catch (e) { /* без цены */ }
+    const k = e_.items.indexOf(it), row = itemsEl.querySelector(`.ttk-ed[data-k="${k}"]`);
+    if (row) row.querySelector('.cnt-meta').innerHTML = metaHtml(it);
+    drawCost();
+  };
+  el.querySelector('#add').onclick = () => pickIngredient('Добавить ингредиент', (np) => {
+    if (np.id === p.id) return notify('Нельзя добавить позицию саму в себя');
+    if (e_.items.some(i => i.id === np.id)) return notify('«' + np.name + '» уже есть в составе — измените количество в его строке');
+    const it = { id: np.id, name: np.name, unit: np.unit, type: np.type, amt: '', price: null, itemId: null };
+    e_.items.push(it); drawItems(); fetchPrice(it);
+    setTimeout(() => { const inp = itemsEl.querySelector(`input[data-k="${e_.items.length - 1}"]`); if (inp) { inp.scrollIntoView({ block: 'center' }); inp.focus(); } }, 300);
+  });
+  el.querySelector('#date').onchange = (ev) => { e_.date = ev.target.value; };
+  el.querySelector('#out').oninput = (ev) => { e_.out = ev.target.value; drawCost(); };
+  el.querySelector('#tech').oninput = (ev) => { e_.tech = ev.target.value; };
+  el.querySelector('#cancel').onclick = async () => { if (await ask('Отменить изменения?')) { r.ed = null; render(); } };
+  el.querySelector('#check').onclick = () => {
+    if (!e_.date || e_.date < d.minDate) return notify('Дата начала — не раньше ' + fDate(d.minDate));
+    const out = amtVal(e_.out);
+    if (isNaN(out) || out <= 0) return notify('Проверьте выход');
+    if (!e_.items.length) return notify('В техкарте нет ни одного ингредиента');
+    const bad = e_.items.find(i => { const v = amtVal(i.amt); return isNaN(v) || v <= 0; });
+    if (bad) return notify('Проверьте количество: ' + bad.name);
+    const ids = e_.items.map(i => i.id);
+    if (new Set(ids).size !== ids.length) return notify('Один и тот же ингредиент указан дважды — объедините строки');
+    const base = chartFor(e_.date);
+    const was = new Map((base ? base.items : []).map(i => [i.id, i]));
+    const now = new Map(e_.items.map(i => [i.id, i]));
+    const lines = [];
+    e_.items.forEach(i => {
+      const v = amtVal(i.amt), o = was.get(i.id);
+      if (i.replaced && !o) lines.push(`🔁 ${h(i.replaced)} → <b>${h(i.name)}</b> ${fAmt(v)} ${h(i.unit)}`);
+      else if (!o) lines.push(`➕ <b>${h(i.name)}</b> ${fAmt(v)} ${h(i.unit)}`);
+      else if (Math.abs(o.amountIn - v) > 1e-9) lines.push(`✏️ ${h(i.name)}: ${fAmt(o.amountIn)} → <b>${fAmt(v)}</b> ${h(i.unit)}`);
+    });
+    (base ? base.items : []).forEach(o => { if (!now.has(o.id) && !e_.items.some(i => i.replaced === o.name && !was.has(i.id))) lines.push(`➖ ${h(o.name)} ${fAmt(o.amountIn)} ${h(o.unit)}`); });
+    if (base && Math.abs(base.assembledAmount - out) > 1e-9) lines.push(`Выход: ${fAmt(base.assembledAmount)} → <b>${fAmt(out)}</b> ${h(p.unit)}`);
+    if (base && (base.technologyDescription || '') !== e_.tech) lines.push('Технология приготовления изменена');
+    if (base && !lines.length) return notify('Изменений нет');
+    const c0 = base ? cost(base.items, base.assembledAmount).per : null, c1 = cost(e_.items, e_.out).per;
+    const sh = openSheet(`<h2>Было → станет</h2>
+      <p class="sub">${h(p.name)} · с ${fDate(e_.date)}${base && base.dateFrom === e_.date ? ' (заменит версию от этой же даты)' : ''}</p>
+      <div class="ttk-diff">${base ? lines.map(l => `<div>${l}</div>`).join('') : '<div>Новая техкарта: ' + e_.items.length + ' ингр.</div>'}</div>
+      <p>Себестоимость: ${c0 != null ? fRub(c0) + ' → ' : ''}<b>${fRub(c1)}</b></p>
+      <p class="hint">Перед записью сервер сохранит резервную копию техкарты. Документы до ${fDate(e_.date)} не изменятся.</p>
+      <div class="grid2"><button class="btn ghost" id="no">Назад</button><button class="btn" id="yes">Сохранить в iiko</button></div>`);
+    sh.el.querySelector('#no').onclick = sh.close;
+    sh.el.querySelector('#yes').onclick = async (ev) => {
+      ev.target.disabled = true; ev.target.textContent = 'Сохраняю…';
+      try {
+        const res = await api('/api/techcard/save', {
+          productId: p.id, baseChartId: base ? base.id : null, dateFrom: e_.date, assembledAmount: out, technologyDescription: e_.tech,
+          items: e_.items.map(i => ({ itemId: i.itemId || null, productId: i.id, amountIn: amtVal(i.amt) })) });
+        sh.close();
+        notify(`Техкарта «${p.name}» сохранена в iiko с ${fDate(res.dateFrom)}.` + (res.verified ? '' : '\n\n⚠️ Проверка чтением не подтвердила изменения — посмотрите техкарту в iikoOffice.'));
+        r.ed = null; r.data = null; render();
+      } catch (e) {
+        ev.target.disabled = false; ev.target.textContent = 'Сохранить в iiko';
+        notify(e.message);
+      }
+    };
+  };
+  drawItems();
+});
 
 VIEWS.ikExport = (el) => {
   el.innerHTML = `
