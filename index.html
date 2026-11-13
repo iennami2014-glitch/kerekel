@@ -147,6 +147,8 @@
     .inv-row.no-ttk .t-main > div:first-child { color: var(--hint); }
     .ttk-head { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 12px; margin: 12px 0; border-radius: 12px; background: var(--card); font-size: 14px; color: var(--hint); }
     .ttk-head b { color: var(--text); }
+    .ttk-yield { flex-basis: 100%; }
+    .ttk-skip { display: block; margin-top: 2px; font-size: 12px; }
     .ttk-tech { white-space: pre-line; padding: 12px; border-radius: 12px; background: var(--card); font-size: 14px; }
     .ttk-ed { display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 12px; margin-bottom: 6px; border-left: 4px solid transparent; border-radius: 12px; background: var(--card); }
     .ttk-ed.bad { border-left-color: var(--danger); }
@@ -2319,6 +2321,25 @@ const TTK_KIND = { DISH: 'Блюдо', PREPARED: 'Заготовка', MODIFIER:
 const fAmt = (n) => (n || 0).toLocaleString('ru-RU', { maximumFractionDigits: 4 });
 const fRub = (n) => n == null ? '—' : (n >= 100 ? Math.round(n).toLocaleString('ru-RU') : n.toLocaleString('ru-RU', { maximumFractionDigits: 2 })) + ' ₽';
 const amtVal = (s) => isPlainNum(s) ? num(s) : calc(s);
+/* Суммарный выход в граммах: строки в кг и л (1 мл ≈ 1 г) по их выходу; шт, порц, уп не входят */
+function yieldG(items, out) {
+  let g = 0;
+  const skip = [];
+  items.forEach(i => {
+    let o = i.amountOut;
+    if (i.amt != null) {
+      const v = amtVal(i.amt), k = i.amountIn ? i.amountOut / i.amountIn : 1;
+      o = isNaN(v) ? 0 : v * k;
+    }
+    if (i.unit === 'кг' || i.unit === 'л') g += o * 1000;
+    else skip.push(`${i.name.trim()} ${fAmt(o)} ${i.unit}`);
+  });
+  const n = num(out) || 1;
+  return { g, per: g / n, n, skip };
+}
+const fG = (g) => Math.round(g).toLocaleString('ru-RU') + ' г';
+const yieldHtml = (y, unit) => `Выход в граммах <b>${fG(y.g)}</b>${y.n !== 1 ? ` <small>(на 1 ${h(unit)} — ${fG(y.per)})</small>` : ''}`
+  + (y.skip.length ? `<small class="ttk-skip">без учёта: ${h(y.skip.join(', '))}</small>` : '');
 
 VIEWS.ikTtk = (el, r) => withLoading(el, async () => {
   const [products, tc] = await Promise.all([ikProducts(), api('/api/techcards').catch(e => {
@@ -2423,7 +2444,8 @@ VIEWS.ikTtkCard = (el, r) => withLoading(el, async () => {
       ${(d.future || []).map(f => `<div class="banner">🗓 <span>С ${fDate(f.dateFrom)} уже запланирована новая версия техкарты (${f.items.length} ингр.)</span></div>`).join('')}
       ${ch ? `
         <div class="ttk-head"><span>Выход <b>${fAmt(ch.assembledAmount)} ${h(p.unit)}</b></span><span>Действует с <b>${fDate(ch.dateFrom)}</b></span>
-          <span>Себестоимость <b>≈ ${fRub(c.per)}</b>${c.miss ? ' <small>(не у всех есть цена)</small>' : ''}</span></div>
+          <span>Себестоимость <b>≈ ${fRub(c.per)}</b>${c.miss ? ' <small>(не у всех есть цена)</small>' : ''}</span>
+          <span class="ttk-yield">${yieldHtml(yieldG(ch.items, ch.assembledAmount), p.unit)}</span></div>
         <div class="section-title">Состав · брутто</div>
         ${ch.items.map(i => `<button class="inv-row" ${['PREPARED', 'DISH', 'MODIFIER'].includes(i.type) ? `data-open="${i.id}"` : ''}>
           <span class="t-main"><div>${h(i.name)}${['PREPARED', 'DISH', 'MODIFIER'].includes(i.type) ? ' <span class="hint">›</span>' : ''}</div>
@@ -2452,6 +2474,7 @@ VIEWS.ikTtkCard = (el, r) => withLoading(el, async () => {
       <div><label>Действует с</label><input id="date" type="date" min="${d.minDate}" value="${h(e_.date)}"></div>
       <div><label>Выход, ${h(p.unit)}</label><input id="out" inputmode="decimal" value="${h(e_.out)}"></div>
     </div>
+    <div class="ttk-head"><span class="ttk-yield" id="yg"></span></div>
     <div class="section-title">Состав · брутто</div>
     <div id="items"></div>
     <button class="btn ghost wide" id="add">➕ Добавить ингредиент</button>
@@ -2461,7 +2484,11 @@ VIEWS.ikTtkCard = (el, r) => withLoading(el, async () => {
       Старая версия техкарты сохранится в iiko до выбранной даты, а копия — на компьютере.</p>
     <div class="inv-bar"><span>Себест.<br><b id="cost">—</b></span><button class="btn ghost" id="cancel">Отмена</button><button class="btn" id="check">Проверить</button></div>`;
   const itemsEl = el.querySelector('#items');
-  const drawCost = () => { const c = cost(e_.items, e_.out); el.querySelector('#cost').textContent = '≈ ' + fRub(c.per); };
+  const drawCost = () => {
+    const c = cost(e_.items, e_.out);
+    el.querySelector('#cost').textContent = '≈ ' + fRub(c.per);
+    el.querySelector('#yg').innerHTML = yieldHtml(yieldG(e_.items, e_.out), p.unit);
+  };
   const metaHtml = (i) => {
     const v = amtVal(i.amt), bad = isNaN(v) || v <= 0;
     return `${TTK_KIND[i.type] || ''}${i.replaced ? ' · вместо «' + h(i.replaced) + '»' : ''}${i.replaced && i.oldUnit && i.oldUnit !== i.unit ? ` · <span class="minus">⚠️ было в ${h(i.oldUnit)}, проверьте количество</span>` : ''}${i.price != null && !bad ? ' · ≈ ' + fRub(i.price * v) : ''}${!isPlainNum(i.amt) && !bad ? ' · = ' + fAmt(v) : ''}`;
@@ -2543,7 +2570,8 @@ VIEWS.ikTtkCard = (el, r) => withLoading(el, async () => {
     const sh = openSheet(`<h2>Было → станет</h2>
       <p class="sub">${h(p.name)} · с ${fDate(e_.date)}${base && base.dateFrom === e_.date ? ' (заменит версию от этой же даты)' : ''}</p>
       <div class="ttk-diff">${base ? lines.map(l => `<div>${l}</div>`).join('') : '<div>Новая техкарта: ' + e_.items.length + ' ингр.</div>'}</div>
-      <p>Себестоимость: ${c0 != null ? fRub(c0) + ' → ' : ''}<b>${fRub(c1)}</b></p>
+      <p>Себестоимость: ${c0 != null ? fRub(c0) + ' → ' : ''}<b>${fRub(c1)}</b><br>
+        Выход в граммах: ${base ? fG(yieldG(base.items, base.assembledAmount).g) + ' → ' : ''}<b>${fG(yieldG(e_.items, e_.out).g)}</b></p>
       <p class="hint">Перед записью сервер сохранит резервную копию техкарты. Документы до ${fDate(e_.date)} не изменятся.</p>
       <div class="grid2"><button class="btn ghost" id="no">Назад</button><button class="btn" id="yes">Сохранить в iiko</button></div>`);
     sh.el.querySelector('#no').onclick = sh.close;
