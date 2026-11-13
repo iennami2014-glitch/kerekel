@@ -138,7 +138,7 @@
     .seg button { padding: 10px 6px; border: 0; border-radius: 10px; background: none; color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
     .seg button.on { background: var(--accent); color: var(--accent-text); }
     .seg small { font-weight: 500; opacity: .8; }
-    .inv-tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px; }
+    .inv-tools { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; margin-top: 12px; }
     .grp { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px; margin-bottom: 6px; border: 0; border-radius: 12px; background: var(--card); color: var(--text); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
     .grp .cnt { color: var(--hint); font-weight: 500; font-size: 14px; }
     .grp.full .cnt { color: var(--ok); font-weight: 700; }
@@ -371,7 +371,7 @@ const HELP = {
     ? ['Приход товара (накладная)', '<ol><li>Выберите склад, куда пришёл товар, и поставщика.</li><li>Добавьте товары: начните вводить название и выберите из подсказок.</li><li>Количество — в единицах товара (кг, л, шт), цена — за одну такую единицу.</li><li>Нажмите «Отправить в iiko».</li></ol>Черновик сохраняется сам — можно выйти и вернуться позже.']
     : r.type === 'writeoff'
       ? ['Списание', 'Списание — когда товар ушёл со склада не через продажу: порча, питание персонала, представительские.<ol><li>Выберите склад и статью.</li><li>Добавьте товары и количество.</li><li>Нажмите «Отправить в iiko».</li></ol>Рядом с товаром видно, сколько его на складе. Черновик сохраняется сам.']
-      : ['Инвентаризация', '<ol><li>Выберите склад и вкладку: «Товары» или «Заготовки».</li><li>Откройте группу и нажмите на позицию — появится калькулятор. Можно писать «(12+3)*8» или считать частями «12+3+5».</li><li>«Дальше ›» сразу открывает следующую позицию.</li><li>Кнопки «Фото» и «Excel» добавляют позиции из снимка листа или файла, «Бланк» — скачать таблицу для заполнения.</li></ol>Пустые позиции не отправляются. Черновик сохраняется сам — считать можно в несколько заходов.'],
+      : ['Инвентаризация', '<ol><li>Выберите склад и вкладку: «Товары» или «Заготовки».</li><li>Откройте группу и нажмите на позицию — появится калькулятор. Можно писать «(12+3)*8» или считать частями «12+3+5».</li><li>«Дальше ›» сразу открывает следующую позицию.</li><li>«Бланк» — скачать таблицу всех позиций, «Excel» — загрузить заполненную таблицу обратно.</li></ol>Пустые позиции не отправляются. Черновик сохраняется сам — считать можно в несколько заходов.'],
   ikInvReview: ['Проверка распознанного', 'Зелёные строки подобраны уверенно, жёлтые — проверьте товар, красные — товар не найден: выберите его из списка или снимите галочку. Потом нажмите «Добавить в инвентаризацию».'],
   ikExport: ['Выгрузка', 'Скачать остатки или номенклатуру в Excel. Если на телефоне файл не скачивается — нажмите «Копировать» и вставьте в таблицу.'],
   unit: ['Учёт в приложении', 'Здесь учёт ведётся прямо в приложении: заведите товары в «Номенклатуре», дальше — накладные, списания и инвентаризации. Остатки посчитаются сами.'],
@@ -1603,7 +1603,9 @@ function calc(src) {
   };
   try { const v = expr(); return i === s.length && isFinite(v) ? r3(v) : NaN; } catch (e) { return NaN; }
 }
-const isPlainNum = (s) => /^\s*\d+([.,]\d+)?\s*$/.test(String(s));
+/* Распознавание фото выключено: нужен ключ Claude API на сервере. Включить — поставить true. */
+const PHOTO_ENABLED = false;
+const isPlainNum =(s) => /^\s*\d+([.,]\d+)?\s*$/.test(String(s));
 
 /* Всплывающее окно снизу. Кнопка «Назад» Telegram сначала закрывает его. */
 let sheetStack = [];
@@ -1678,8 +1680,8 @@ function invStart() {
     ${n ? `<div class="banner">📝 <span>Есть незаконченная инвентаризация: ${n} поз. Новые данные добавятся в неё.</span>
       <button class="btn sm" data-m="continue">Открыть</button></div>` : ''}
     <div class="pick">
-      <button data-m="photo"><span class="e">📷</span><span><b>Загрузить фото</b>
-        <small>Сфотографируйте лист пересчёта или выберите фото из галереи — позиции и количество распознаются сами</small></span></button>
+      ${PHOTO_ENABLED ? `<button data-m="photo"><span class="e">📷</span><span><b>Загрузить фото</b>
+        <small>Сфотографируйте лист пересчёта или выберите фото из галереи — позиции и количество распознаются сами</small></span></button>` : ''}
       <button data-m="excel"><span class="e">📊</span><span><b>Импорт из Excel</b>
         <small>Файл с колонками «Наименование» и «Количество». Готовый бланк можно скачать на следующем экране</small></span></button>
       <button data-m="manual"><span class="e">✍️</span><span><b>Провести вручную</b>
@@ -1871,7 +1873,7 @@ function ikInventoryView(el, r) {
         <div><label>Дата</label><input id="date" type="date" value="${h(d.date)}"></div>
       </div>
       <div class="inv-tools">
-        <button class="btn ghost sm" id="addPhoto">📷 Фото</button>
+        ${PHOTO_ENABLED ? '<button class="btn ghost sm" id="addPhoto">📷 Фото</button>' : ''}
         <button class="btn ghost sm" id="addXls">📊 Excel</button>
         <button class="btn ghost sm" id="blank">⬇️ Бланк</button>
       </div>
@@ -2005,7 +2007,7 @@ function ikInventoryView(el, r) {
       try { importLines(await readInvExcel(file), 'Excel'); } catch (e) { notify('Не удалось прочитать файл: ' + e.message); }
     };
     const fPhoto = el.querySelector('#fPhoto'), fXls = el.querySelector('#fXls');
-    el.querySelector('#addPhoto').onclick = () => fPhoto.click();
+    if (PHOTO_ENABLED) el.querySelector('#addPhoto').onclick = () => fPhoto.click();
     el.querySelector('#addXls').onclick = () => fXls.click();
     fPhoto.onchange = () => { const f = [...fPhoto.files]; fPhoto.value = ''; if (f.length) runPhoto(f); };
     fXls.onchange = () => { const f = fXls.files[0]; fXls.value = ''; if (f) runExcel(f); };
