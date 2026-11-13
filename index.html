@@ -123,6 +123,56 @@
     .tile.doc .t-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tile.doc .t-side .st { margin: 4px 0 0; }
     .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 10px; background: var(--accent); color: var(--accent-text); vertical-align: middle; margin-left: 6px; }
+    .sheet-bg { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; opacity: 0; transition: opacity .15s; }
+    .sheet-bg.show { opacity: 1; }
+    .sheet { position: relative; width: 100%; max-width: 560px; max-height: 92vh; overflow: auto; background: var(--bg); border-radius: 20px 20px 0 0; padding: 18px 16px calc(16px + env(safe-area-inset-bottom)); transform: translateY(24px); transition: transform .15s; }
+    .sheet-bg.show .sheet { transform: none; }
+    .sheet h2 { margin: 0 0 4px; font-size: 21px; padding-right: 40px; }
+    .sheet-x { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: var(--card); color: var(--hint); font-size: 15px; cursor: pointer; }
+    .pick button { display: flex; gap: 14px; align-items: center; width: 100%; padding: 16px; margin-bottom: 10px; border: 2px solid transparent; border-radius: 16px; background: var(--card); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+    .pick button:active { transform: scale(.985); border-color: var(--accent); }
+    .pick .e { flex: 0 0 52px; height: 52px; display: grid; place-items: center; border-radius: 14px; background: var(--accent); font-size: 28px; }
+    .pick b { display: block; font-size: 17px; }
+    .pick small { display: block; margin-top: 3px; color: var(--hint); font-size: 13px; line-height: 1.35; }
+    .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; margin: 14px 0 10px; border-radius: 12px; background: var(--card); }
+    .seg button { padding: 10px 6px; border: 0; border-radius: 10px; background: none; color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+    .seg button.on { background: var(--accent); color: var(--accent-text); }
+    .seg small { font-weight: 500; opacity: .8; }
+    .inv-tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px; }
+    .grp { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px; margin-bottom: 6px; border: 0; border-radius: 12px; background: var(--card); color: var(--text); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+    .grp .cnt { color: var(--hint); font-weight: 500; font-size: 14px; }
+    .grp.full .cnt { color: var(--ok); font-weight: 700; }
+    .grp .arrow { transition: transform .15s; }
+    .grp.open .arrow { transform: rotate(90deg); }
+    .grp-body { margin: 0 0 12px 8px; padding-left: 8px; border-left: 2px solid var(--card); }
+    .inv-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; margin: 0 0 6px; border: 0; border-left: 4px solid transparent; border-radius: 12px; background: var(--card); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+    .inv-row.done { border-left-color: var(--ok); }
+    .inv-row:active { transform: scale(.985); }
+    .inv-val { text-align: right; font-weight: 700; white-space: nowrap; }
+    .inv-val.empty { color: var(--accent); font-weight: 500; font-size: 14px; }
+    .inv-val small { display: block; max-width: 120px; overflow: hidden; text-overflow: ellipsis; color: var(--hint); font-weight: 400; font-size: 12px; }
+    .inv-bar { position: sticky; bottom: 0; z-index: 3; display: flex; gap: 12px; align-items: center; margin: 14px -16px 0; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: var(--bg); box-shadow: 0 -1px 0 var(--card); font-size: 13px; color: var(--hint); line-height: 1.2; }
+    .inv-bar b { color: var(--text); font-size: 18px; }
+    .inv-bar .btn { flex: 1; }
+    .calc-name { font-weight: 700; font-size: 19px; padding-right: 40px; }
+    .calc-expr { margin-top: 12px; padding: 12px 14px; font-size: 28px; font-weight: 600; text-align: right; }
+    .calc-res { min-height: 24px; margin: 6px 4px 10px; color: var(--hint); font-size: 18px; text-align: right; }
+    .calc-res.ok { color: var(--ok); font-weight: 700; }
+    .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .keys button { height: 54px; border: 0; border-radius: 12px; background: var(--card); color: var(--text); font: inherit; font-size: 22px; cursor: pointer; user-select: none; }
+    .keys button.op { color: var(--accent); font-weight: 700; }
+    .keys button:active { transform: scale(.95); background: var(--accent); color: var(--accent-text); }
+    .calc-act { display: grid; grid-template-columns: 56px 1fr 1fr; gap: 6px; margin-top: 10px; }
+    .rv { margin-bottom: 8px; padding: 10px; border-left: 4px solid var(--ok); border-radius: 12px; background: var(--card); }
+    .rv.warn { border-left-color: #e0a100; }
+    .rv.none { border-left-color: var(--danger); }
+    .rv.off { opacity: .55; }
+    .rv-src { display: flex; justify-content: space-between; gap: 8px; color: var(--hint); font-size: 13px; overflow-wrap: anywhere; }
+    .rv-row { display: grid; grid-template-columns: 1fr 84px 28px; gap: 6px; align-items: center; margin-top: 6px; }
+    .rv-row input { background: var(--bg); padding: 9px 10px; }
+    .rv-row input[type=checkbox] { width: 22px; height: 22px; margin: 0; }
+    .spin { width: 40px; height: 40px; margin: 14px auto; border: 4px solid var(--card); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -321,7 +371,8 @@ const HELP = {
     ? ['Приход товара (накладная)', '<ol><li>Выберите склад, куда пришёл товар, и поставщика.</li><li>Добавьте товары: начните вводить название и выберите из подсказок.</li><li>Количество — в единицах товара (кг, л, шт), цена — за одну такую единицу.</li><li>Нажмите «Отправить в iiko».</li></ol>Черновик сохраняется сам — можно выйти и вернуться позже.']
     : r.type === 'writeoff'
       ? ['Списание', 'Списание — когда товар ушёл со склада не через продажу: порча, питание персонала, представительские.<ol><li>Выберите склад и статью.</li><li>Добавьте товары и количество.</li><li>Нажмите «Отправить в iiko».</li></ol>Рядом с товаром видно, сколько его на складе. Черновик сохраняется сам.']
-      : ['Инвентаризация', 'Пересчёт склада: введите, сколько товара реально лежит. «По учёту» — сколько должно быть по iiko. Пустые строки не отправляются. Черновик сохраняется сам — считать можно в несколько заходов.'],
+      : ['Инвентаризация', '<ol><li>Выберите склад и вкладку: «Товары» или «Заготовки».</li><li>Откройте группу и нажмите на позицию — появится калькулятор. Можно писать «(12+3)*8» или считать частями «12+3+5».</li><li>«Дальше ›» сразу открывает следующую позицию.</li><li>Кнопки «Фото» и «Excel» добавляют позиции из снимка листа или файла, «Бланк» — скачать таблицу для заполнения.</li></ol>Пустые позиции не отправляются. Черновик сохраняется сам — считать можно в несколько заходов.'],
+  ikInvReview: ['Проверка распознанного', 'Зелёные строки подобраны уверенно, жёлтые — проверьте товар, красные — товар не найден: выберите его из списка или снимите галочку. Потом нажмите «Добавить в инвентаризацию».'],
   ikExport: ['Выгрузка', 'Скачать остатки или номенклатуру в Excel. Если на телефоне файл не скачивается — нажмите «Копировать» и вставьте в таблицу.'],
   unit: ['Учёт в приложении', 'Здесь учёт ведётся прямо в приложении: заведите товары в «Номенклатуре», дальше — накладные, списания и инвентаризации. Остатки посчитаются сами.'],
   invoices: ['Накладные', 'Приход товара по дням. Кнопка сверху — новая накладная, поиск — по номеру, поставщику или товару.'],
@@ -350,7 +401,7 @@ let data = null;            // { items: [], invoices: [], counts: [] }
 const stack = [{ view: 'units' }];
 
 function go(view, params = {}) { haptic(); stack.push({ view, ...params }); render(); }
-function back() { if (stack.length > 1) { stack.pop(); render(); } }
+function back() { if (closeTopSheet()) return; if (stack.length > 1) { stack.pop(); render(); } }
 function save() { Store.save(unitKey, data); }
 
 if (inTelegram) tg.BackButton.onClick(back);
@@ -1173,7 +1224,7 @@ VIEWS.ikHome = (el) => {
     <div class="qa">
       <button data-new="invoice"><span class="e">🧾</span>Приход<br>(накладная)</button>
       <button data-new="writeoff"><span class="e">📤</span>Списание</button>
-      <button data-new="inventory"><span class="e">📋</span>Инвентари&shy;зация</button>
+      <button data-inv="1"><span class="e">📋</span>Начать инвентари&shy;зацию</button>
     </div>
     <div class="section-title">Посмотреть</div>
     ${tile('ikStock', '📊', 'Остатки', 'Сейчас или на любую дату')}
@@ -1182,6 +1233,7 @@ VIEWS.ikHome = (el) => {
     ${tile('ikExport', '📥', 'Выгрузка в Excel', 'Остатки и товары таблицей')}`;
   el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
   el.querySelectorAll('[data-new]').forEach(b => b.onclick = () => go('ikDoc', { type: b.dataset.new }));
+  el.querySelector('[data-inv]').onclick = invStart;
   el.querySelector('#sf').onsubmit = (e) => {
     e.preventDefault();
     const q = el.querySelector('#q').value.trim();
@@ -1531,11 +1583,271 @@ VIEWS.ikDoc = (el, r) => r.type === 'inventory' ? ikInventoryView(el, r) : withL
   loadStock();
 });
 
+/* ================= Инвентаризация: фото, Excel, вручную с калькулятором ================= */
+/* Калькулятор: «(12+3)*8», «2,5+1», «12х0,5», «10:4». Возвращает число или NaN. */
+function calc(src) {
+  const s = String(src == null ? '' : src).replace(/\s+/g, '').replace(/,/g, '.')
+    .replace(/[×xхXХ*]/g, '*').replace(/[÷:/]/g, '/').replace(/[−–—]/g, '-');
+  if (!s) return NaN;
+  let i = 0;
+  const expr = () => { let v = term(); while (s[i] === '+' || s[i] === '-') { const o = s[i++]; const t = term(); v = o === '+' ? v + t : v - t; } return v; };
+  const term = () => { let v = factor(); while (s[i] === '*' || s[i] === '/') { const o = s[i++]; const f = factor(); v = o === '*' ? v * f : v / f; } return v; };
+  const factor = () => {
+    if (s[i] === '-') { i++; return -factor(); }
+    if (s[i] === '+') { i++; return factor(); }
+    if (s[i] === '(') { i++; const v = expr(); if (s[i] !== ')') throw new Error('('); i++; return v; }
+    const m = /^\d+\.(?!\d)|^\d*\.?\d+/.exec(s.slice(i));
+    if (!m) throw new Error('num');
+    i += m[0].length;
+    return parseFloat(m[0]);
+  };
+  try { const v = expr(); return i === s.length && isFinite(v) ? r3(v) : NaN; } catch (e) { return NaN; }
+}
+const isPlainNum = (s) => /^\s*\d+([.,]\d+)?\s*$/.test(String(s));
+
+/* Всплывающее окно снизу. Кнопка «Назад» Telegram сначала закрывает его. */
+let sheetStack = [];
+function openSheet(html, { locked = false } = {}) {
+  const bg = document.createElement('div');
+  bg.className = 'sheet-bg';
+  bg.innerHTML = `<div class="sheet">${locked ? '' : '<button class="sheet-x" aria-label="Закрыть">✕</button>'}${html}</div>`;
+  document.body.appendChild(bg);
+  requestAnimationFrame(() => bg.classList.add('show'));
+  const api_ = { el: bg.querySelector('.sheet'), close: () => { sheetStack = sheetStack.filter(x => x !== api_); bg.remove(); }, locked };
+  if (!locked) {
+    bg.onclick = (e) => { if (e.target === bg) api_.close(); };
+    bg.querySelector('.sheet-x').onclick = api_.close;
+  }
+  sheetStack.push(api_);
+  return api_;
+}
+function closeTopSheet() {
+  const s = sheetStack[sheetStack.length - 1];
+  if (!s) return false;
+  if (!s.locked) s.close();
+  return true;
+}
+
+/* Позиции для инвентаризации: товары и заготовки */
+const invProducts = () => IK.products.filter(p => !p.deleted && (p.type === 'GOODS' || p.type === 'PREPARED'));
+const INV_TABS = { GOODS: 'Товары', PREPARED: 'Заготовки' };
+function invIndex() {
+  if (IK.invIdx) return IK.invIdx;
+  const list = invProducts();
+  const cnt = {};
+  list.forEach(p => { cnt[p.name] = (cnt[p.name] || 0) + 1; });
+  const byLabel = new Map(), labelOf = new Map(), byId = new Map(), byNum = new Map(), byName = new Map();
+  list.forEach(p => {
+    let label = p.name;
+    if (cnt[p.name] > 1) label += p.num ? ` · арт. ${p.num}` : (p.type === 'PREPARED' ? ' · заготовка' : ' · товар');
+    while (byLabel.has(label)) label += ' ·';
+    byLabel.set(label, p); labelOf.set(p.id, label); byId.set(p.id, p);
+    if (p.num) byNum.set(norm(p.num).trim(), p);
+    const k = norm(p.name).trim();
+    byName.set(k, byName.has(k) ? null : p); // null — название не уникально
+  });
+  return (IK.invIdx = { list, byLabel, labelOf, byId, byNum, byName, toks: list.map(p => [p, tokens(p.name)]) });
+}
+const tokens = (s) => norm(s).replace(/[^a-zа-я0-9]+/g, ' ').split(' ').filter(t => t.length > 1);
+function tokScore(a, b) {
+  if (!a.length || !b.length) return 0;
+  let m = 0;
+  a.forEach(x => { if (b.some(y => x === y || (Math.min(x.length, y.length) >= 3 && (x.startsWith(y) || y.startsWith(x))))) m++; });
+  return 2 * m / (a.length + b.length);
+}
+/* Сопоставление строки из фото/Excel с позицией iiko: ok — уверенно, warn — проверить, none — не найдено */
+function matchLine(line) {
+  const ix = invIndex();
+  if (line.productId && ix.byId.has(line.productId)) return { p: ix.byId.get(line.productId), st: line.sure === false ? 'warn' : 'ok' };
+  if (line.art) { const p = ix.byNum.get(norm(line.art).trim()); if (p) return { p, st: 'ok' }; }
+  const exact = ix.byName.get(norm(line.text).trim());
+  if (exact) return { p: exact, st: 'ok' };
+  const t = tokens(line.text);
+  let best = null, bs = 0;
+  ix.toks.forEach(([p, pt]) => { const s = tokScore(t, pt); if (s > bs) { bs = s; best = p; } });
+  if (best && bs >= 0.45) return { p: best, st: bs >= 0.85 ? 'ok' : 'warn' };
+  return { p: null, st: 'none' };
+}
+
+/* Окно «Начать инвентаризацию» */
+function invStart() {
+  const dr = loadDraft('inventory'), n = draftSize('inventory', dr);
+  const sh = openSheet(`
+    <h2>Начать инвентаризацию</h2>
+    <p class="sub">Как будете считать?</p>
+    ${n ? `<div class="banner">📝 <span>Есть незаконченная инвентаризация: ${n} поз. Новые данные добавятся в неё.</span>
+      <button class="btn sm" data-m="continue">Открыть</button></div>` : ''}
+    <div class="pick">
+      <button data-m="photo"><span class="e">📷</span><span><b>Загрузить фото</b>
+        <small>Сфотографируйте лист пересчёта или выберите фото из галереи — позиции и количество распознаются сами</small></span></button>
+      <button data-m="excel"><span class="e">📊</span><span><b>Импорт из Excel</b>
+        <small>Файл с колонками «Наименование» и «Количество». Готовый бланк можно скачать на следующем экране</small></span></button>
+      <button data-m="manual"><span class="e">✍️</span><span><b>Провести вручную</b>
+        <small>Все товары и заготовки списком, вводите количество — с калькулятором</small></span></button>
+    </div>
+    <input type="file" id="fPhoto" accept="image/*" multiple hidden>
+    <input type="file" id="fXls" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" hidden>`);
+  const open = (pending) => { sh.close(); go('ikDoc', { type: 'inventory', pending }); };
+  const fPhoto = sh.el.querySelector('#fPhoto'), fXls = sh.el.querySelector('#fXls');
+  fPhoto.onchange = () => fPhoto.files.length && open({ kind: 'photo', files: [...fPhoto.files] });
+  fXls.onchange = () => fXls.files.length && open({ kind: 'excel', file: fXls.files[0] });
+  sh.el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => {
+    const m = b.dataset.m;
+    if (m === 'photo') fPhoto.click();
+    else if (m === 'excel') fXls.click();
+    else open(null);
+  });
+}
+
+/* ---------- Чтение Excel ---------- */
+async function readInvExcel(file) {
+  await loadXlsx();
+  const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+  const out = [];
+  for (const name of wb.SheetNames) {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: '' });
+    if (!rows.length) continue;
+    const find = (row, re) => row.findIndex(c => re.test(String(c).trim()));
+    let head = -1, cName = -1, cQty = -1, cArt = -1, cId = -1;
+    for (let i = 0; i < Math.min(rows.length, 20) && head < 0; i++) {
+      const n = find(rows[i], /наимен|товар|назван|продукт|позици|номенклат/i);
+      if (n < 0) continue;
+      let q = find(rows[i], /факт/i);
+      if (q < 0) q = find(rows[i], /^кол|количеств|посчитан/i);
+      if (q < 0) continue;
+      head = i; cName = n; cQty = q; cArt = find(rows[i], /артикул|^код|^арт/i); cId = find(rows[i], /^id$/i);
+    }
+    if (head < 0) { // без заголовка: текстовая колонка — название, числовая — количество
+      const sample = rows.slice(0, 40), w = Math.max(...sample.map(r => r.length));
+      const score = (c, f) => sample.filter(r => f(r[c])).length;
+      let bestT = -1, bestN = -1;
+      for (let c = 0; c < w; c++) {
+        if (bestT < 0 || score(c, v => typeof v === 'string' && /[a-zа-я]{3}/i.test(v)) > score(bestT, v => typeof v === 'string' && /[a-zа-я]{3}/i.test(v))) bestT = c;
+      }
+      for (let c = 0; c < w; c++) {
+        if (c !== bestT && (bestN < 0 || score(c, v => typeof v === 'number') >= score(bestN, v => typeof v === 'number'))) bestN = c;
+      }
+      if (bestT < 0 || bestN < 0) continue;
+      cName = bestT; cQty = bestN;
+    }
+    rows.slice(head + 1).forEach(r => {
+      const text = String(r[cName] ?? '').trim();
+      const q = r[cQty];
+      if (!text || q === '' || q == null || /^итог/i.test(text)) return;
+      out.push({ text, qty: typeof q === 'number' ? String(r3(q)).replace('.', ',') : String(q).trim(),
+        art: cArt >= 0 ? String(r[cArt] ?? '').trim() : '', productId: cId >= 0 ? String(r[cId] ?? '').trim() : '' });
+    });
+    if (out.length) break;
+  }
+  return out;
+}
+
+/* ---------- Фото → сервер (распознавание) ---------- */
+async function shrinkImage(file, max = 2000) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Не удалось открыть фото ' + file.name)); i.src = url; });
+    const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.85).split(',')[1];
+  } finally { URL.revokeObjectURL(url); }
+}
+async function recognizePhotos(files) {
+  const sh = openSheet(`<h2>Распознаю фото</h2><div class="spin"></div><p class="hint" id="ph" style="text-align:center">Подготовка…</p>
+    <p class="hint" style="text-align:center">Обычно это занимает до минуты на фото. Не закрывайте приложение.</p>`, { locked: true });
+  const ph = sh.el.querySelector('#ph');
+  const lines = [], notes = [];
+  try {
+    for (let k = 0; k < files.length; k++) {
+      ph.textContent = `Фото ${k + 1} из ${files.length}: отправляю…`;
+      const image = await shrinkImage(files[k]);
+      let job;
+      try { job = (await api('/api/inventory/recognize', { image, mediaType: 'image/jpeg' })).job; } catch (e) {
+        if (/Not Found|Not Allowed|404|405/.test(e.message)) throw new Error('Сервер ещё старой версии. Перезапустите start.cmd и попробуйте снова.');
+        throw e;
+      }
+      ph.textContent = `Фото ${k + 1} из ${files.length}: читаю записи…`;
+      let st = null;
+      for (let t = 0; t < 200; t++) {
+        await new Promise(r => setTimeout(r, 2500));
+        st = await api('/api/inventory/recognize/' + job);
+        if (st.status !== 'work') break;
+      }
+      if (!st || st.status === 'work') throw new Error('Распознавание идёт слишком долго. Попробуйте фото поменьше или по частям.');
+      if (st.status === 'error') throw new Error(st.error);
+      st.result.lines.forEach(l => lines.push({ ...l, qty: l.qty == null ? '' : String(l.qty).replace('.', ','), src: files.length > 1 ? `фото ${k + 1}` : '' }));
+      if (st.result.note) notes.push((files.length > 1 ? `Фото ${k + 1}: ` : '') + st.result.note);
+    }
+  } finally { sh.close(); }
+  return { lines, note: notes.join('\n') };
+}
+
+/* ---------- Калькулятор количества ---------- */
+function openCalc(p, ctx) {
+  const unit = p.unit || '';
+  const sh = openSheet(`
+    <div class="calc-name">${h(p.name)}</div>
+    <div class="hint">${p.type === 'PREPARED' ? 'Заготовка' : 'Товар'}${unit ? ' · в ' + h(unit) : ''} · по учёту: ${fQty(ctx.expected(p.id))} ${h(unit)}</div>
+    <input class="calc-expr" id="ex" inputmode="none" autocomplete="off" placeholder="0" value="${h(ctx.get(p.id) || '')}">
+    <div class="calc-res" id="res"></div>
+    <div class="keys">
+      ${['C', '(', ')', '÷', '7', '8', '9', '×', '4', '5', '6', '−', '1', '2', '3', '+', ',', '0', '⌫', '=']
+        .map(k => `<button data-k="${k}" class="${/[0-9,]/.test(k) ? '' : 'op'}">${k}</button>`).join('')}
+    </div>
+    <div class="calc-act">
+      <button class="btn ghost" id="clr" title="Убрать количество">🗑</button>
+      <button class="btn ghost" id="ok">Сохранить</button>
+      <button class="btn" id="next">${ctx.hasNext(p.id) ? 'Дальше ›' : 'Готово'}</button>
+    </div>
+    <p class="hint" style="margin:10px 0 0">Можно считать частями: «12+3+5». Если товар лежит в нескольких местах — допишите «+» и количество.</p>`);
+  const ex = sh.el.querySelector('#ex'), res = sh.el.querySelector('#res');
+  const upd = () => {
+    const v = ex.value.trim(), n = calc(v);
+    res.className = 'calc-res' + (v && !isNaN(n) ? ' ok' : '');
+    res.textContent = !v ? 'Введите количество' : isNaN(n) ? '…' : (isPlainNum(v) ? '' : '= ') + fQty(n) + ' ' + unit;
+  };
+  const put = (s) => { ex.value += s; upd(); };
+  sh.el.querySelector('.keys').onclick = (e) => {
+    const k = e.target.dataset && e.target.dataset.k; if (!k) return;
+    haptic();
+    if (k === 'C') ex.value = '';
+    else if (k === '⌫') ex.value = ex.value.slice(0, -1);
+    else if (k === '=') { const n = calc(ex.value); if (!isNaN(n)) ex.value = String(n).replace('.', ','); }
+    else put({ '÷': '/', '×': '*', '−': '-' }[k] || k);
+    upd();
+  };
+  ex.oninput = upd;
+  const save = () => {
+    const v = ex.value.trim();
+    if (!v) { ctx.set(p.id, null); return true; }
+    const n = calc(v);
+    if (isNaN(n)) { toast('Проверьте запись: ' + v); return false; }
+    if (n < 0) { toast('Количество не может быть меньше нуля'); return false; }
+    ctx.set(p.id, v);
+    return true;
+  };
+  ex.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); sh.el.querySelector('#next').click(); } };
+  sh.el.querySelector('#clr').onclick = () => { ex.value = ''; save(); sh.close(); };
+  sh.el.querySelector('#ok').onclick = () => { if (save()) sh.close(); };
+  sh.el.querySelector('#next').onclick = () => {
+    if (!save()) return;
+    sh.close();
+    const nx = ctx.next(p.id);
+    if (nx) openCalc(nx, ctx);
+  };
+  upd();
+  if (!matchMedia('(pointer: coarse)').matches) ex.focus();
+}
+
+/* ---------- Экран инвентаризации ---------- */
 function ikInventoryView(el, r) {
   return withLoading(el, async () => {
     const t = DOC_TYPES.inventory;
     await ikProducts();
-    const goods = ikGoods(IK.products);
+    const ix = invIndex();
+    const all = ix.list;
     if (!r.draft) {
       const saved = loadDraft('inventory');
       if (saved && draftSize('inventory', saved)) { r.draft = saved; r.restored = true; }
@@ -1543,77 +1855,166 @@ function ikInventoryView(el, r) {
       if (!depStores().some(s => s.id === r.draft.storeId)) r.draft.storeId = lastStore();
     }
     const d = r.draft;
+    d.actual = d.actual || {};
+    r.tab = r.tab || 'GOODS';
+    r.filter = r.filter || 'all';
+    r.open = r.open || new Set();
     const persist = () => saveDraft('inventory', d);
-    let expected = {}, withRows = new Set();
+    let expected = {}, withRows = new Set(), visible = [];
+    const INV_FILTERS = [['all', 'Все'], ['stock', 'Есть на складе'], ['todo', 'Не посчитано'], ['done', 'Посчитано']];
     el.innerHTML = `
       ${r.restored ? draftBanner('inventory', d) : ''}
       <h1>Инвентаризация</h1>
       <p class="sub">${h(IK.dep.name)} · уйдёт в iiko без проведения</p>
-      <label>Склад</label>
-      <select id="storeId">${storeOptions(d.storeId)}</select>
       <div class="grid2">
+        <div><label>Склад</label><select id="storeId">${storeOptions(d.storeId)}</select></div>
         <div><label>Дата</label><input id="date" type="date" value="${h(d.date)}"></div>
-        <div><label>Поиск</label><input id="q" type="search" placeholder="Любой товар"></div>
       </div>
+      <div class="inv-tools">
+        <button class="btn ghost sm" id="addPhoto">📷 Фото</button>
+        <button class="btn ghost sm" id="addXls">📊 Excel</button>
+        <button class="btn ghost sm" id="blank">⬇️ Бланк</button>
+      </div>
+      <input type="file" id="fPhoto" accept="image/*" multiple hidden>
+      <input type="file" id="fXls" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" hidden>
+      <div class="seg">${Object.entries(INV_TABS).map(([k, l]) => `<button data-tab="${k}">${l} <small></small></button>`).join('')}</div>
+      <div class="search"><input id="q" type="search" placeholder="Найти позицию" value="${h(r.q || '')}"></div>
+      <div id="flt"></div>
+      <div id="rows"></div>
+      <button class="btn ghost wide" id="fill" style="margin-top:8px">Заполнить пустые по учёту</button>
       <label>Комментарий</label>
       <input id="comment" value="${h(d.comment)}" placeholder="Необязательно">
-      <p class="hint">Показаны товары, по которым есть движение на этом складе. Другой товар найдите поиском. Пустые строки не отправляются.</p>
-      <button class="btn ghost wide" id="fill" style="margin:0 0 12px">Заполнить пустые по учёту</button>
-      <div id="rows"></div>
-      <div class="total"><span>Посчитано позиций</span><span id="cnt">0</span></div>
-      <button class="btn wide" id="send">Отправить в iiko</button>`;
+      <div class="inv-bar"><span>Посчитано<br><b id="cnt">0</b></span><button class="btn" id="send">Отправить в iiko</button></div>`;
     const rowsEl = el.querySelector('#rows');
+    const val = (id) => calc(d.actual[id]);
     const diffText = (id) => {
-      const a = num(d.actual[id] ?? '');
+      const a = val(id);
       if (isNaN(a)) return '';
       const diff = r3(a - (expected[id] || 0));
-      if (!diff) return '<span class="plus">совпадает</span>';
-      return `<span class="${diff > 0 ? 'plus' : 'minus'}">${diff > 0 ? '+' : ''}${fQty(diff)}</span>`;
+      if (!diff) return ' · <span class="plus">совпадает</span>';
+      return ` · <span class="${diff > 0 ? 'plus' : 'minus'}">${diff > 0 ? '+' : ''}${fQty(diff)}</span>`;
     };
-    const updateCount = () => { el.querySelector('#cnt').textContent = Object.keys(d.actual).length; };
+    const rowHtml = (p) => {
+      const v = d.actual[p.id], has = v != null && v !== '';
+      return `<button class="inv-row ${has ? 'done' : ''}" data-id="${p.id}">
+        <span class="t-main"><div>${h(p.name)}</div>
+          <div class="cnt-meta">по учёту: ${fQty(expected[p.id])} ${h(p.unit)}${has ? diffText(p.id) : ''}</div></span>
+        <span class="inv-val ${has ? '' : 'empty'}">${has ? fQty(val(p.id)) + ' ' + h(p.unit) + (isPlainNum(v) ? '' : `<small>${h(v)}</small>`) : 'ввести'}</span>
+      </button>`;
+    };
+    const updateCount = () => {
+      el.querySelector('#cnt').textContent = Object.keys(d.actual).length;
+      el.querySelectorAll('.seg button').forEach(b => {
+        const tab = b.dataset.tab, list = all.filter(p => p.type === tab);
+        b.classList.toggle('on', tab === r.tab);
+        b.querySelector('small').textContent = `${list.filter(p => d.actual[p.id] != null).length}/${list.length}`;
+      });
+    };
     const drawRows = () => {
-      const q = el.querySelector('#q').value.toLowerCase().trim();
-      const list = (q
-        ? goods.filter(p => p.name.toLowerCase().includes(q) || p.group.toLowerCase().includes(q) || p.num.toLowerCase().includes(q))
-        : goods.filter(p => withRows.has(p.id) || d.actual[p.id] != null)).slice().sort(byKeys('group', 'name'));
-      rowsEl.innerHTML = list.slice(0, 200).map(p => `
-        <div class="cnt-row" data-id="${p.id}">
-          <div><div>${h(p.name)}</div>
-            <div class="cnt-meta">${p.group ? h(p.group) + ' · ' : ''}по учёту: ${fQty(expected[p.id])} ${h(p.unit)} · <span class="d">${diffText(p.id)}</span></div></div>
-          <input inputmode="decimal" placeholder="${fQty(expected[p.id])}" value="${h(d.actual[p.id] ?? '')}">
-        </div>`).join('')
-        + (list.length > 200 ? `<p class="hint">Показано 200 из ${list.length}. Уточните поиск.</p>` : '')
-        + (list.length ? '' : '<div class="empty">Нет товаров. Найдите нужный поиском.</div>');
+      el.querySelector('#flt').innerHTML = chipsHtml(INV_FILTERS, r.filter, 'f');
+      el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { r.filter = b.dataset.f; drawRows(); });
+      const q = norm(r.q).trim();
+      const list = all.filter(p => p.type === r.tab
+        && (!q || norm(p.name + ' ' + p.group + ' ' + p.num).includes(q))
+        && (r.filter === 'all' || (r.filter === 'stock' && withRows.has(p.id))
+          || (r.filter === 'done' && d.actual[p.id] != null) || (r.filter === 'todo' && d.actual[p.id] == null)))
+        .sort(byKeys('group', 'name'));
+      const flat = !!q || r.filter !== 'all';
+      const groups = new Map();
+      list.forEach(p => { const g = p.group || 'Без группы'; if (!groups.has(g)) groups.set(g, []); groups.get(g).push(p); });
+      let html = '', shown = 0;
+      visible = [];
+      groups.forEach((items, g) => {
+        const done = items.filter(p => d.actual[p.id] != null).length;
+        const open = flat || r.open.has(g);
+        html += `<button class="grp ${open ? 'open' : ''} ${done === items.length ? 'full' : ''}" data-g="${h(g)}">
+          <span>📁</span><span class="t-main">${h(g)}</span><span class="cnt">${done}/${items.length}</span><span class="arrow">›</span></button>`;
+        if (open) {
+          const part = items.slice(0, Math.max(0, 400 - shown));
+          shown += part.length; visible.push(...part);
+          html += `<div class="grp-body">${part.map(rowHtml).join('')}</div>`;
+        }
+      });
+      rowsEl.innerHTML = html + (shown >= 400 ? '<p class="hint">Показаны первые 400 позиций. Уточните поиск.</p>' : '')
+        + (list.length ? '' : `<div class="empty">${q ? 'Ничего не найдено' : 'Здесь пока пусто'}</div>`);
       updateCount();
     };
+    const ctx = {
+      expected: (id) => expected[id] || 0,
+      get: (id) => d.actual[id],
+      set: (id, v) => {
+        if (v == null) delete d.actual[id]; else d.actual[id] = v;
+        persist();
+        const row = rowsEl.querySelector(`.inv-row[data-id="${id}"]`);
+        if (row && r.filter === 'all') { row.outerHTML = rowHtml(ix.byId.get(id)); refreshGroupCounts(); updateCount(); }
+        else drawRows();
+      },
+      hasNext: (id) => visible.findIndex(p => p.id === id) < visible.length - 1,
+      next: (id) => { const i = visible.findIndex(p => p.id === id); return i >= 0 ? visible[i + 1] : null; },
+    };
+    const refreshGroupCounts = () => rowsEl.querySelectorAll('.grp').forEach(b => {
+      const items = all.filter(p => p.type === r.tab && (p.group || 'Без группы') === b.dataset.g);
+      const done = items.filter(p => d.actual[p.id] != null).length;
+      b.querySelector('.cnt').textContent = `${done}/${items.length}`;
+      b.classList.toggle('full', done === items.length);
+    });
+    rowsEl.onclick = (e) => {
+      const g = e.target.closest('.grp');
+      if (g) {
+        if (r.q || r.filter !== 'all') return;
+        r.open.has(g.dataset.g) ? r.open.delete(g.dataset.g) : r.open.add(g.dataset.g);
+        drawRows(); return;
+      }
+      const row = e.target.closest('.inv-row');
+      if (row) openCalc(ix.byId.get(row.dataset.id), ctx);
+    };
+    el.querySelectorAll('.seg button').forEach(b => b.onclick = () => { r.tab = b.dataset.tab; drawRows(); });
+    el.querySelector('#q').oninput = (e) => { r.q = e.target.value; drawRows(); };
+    el.querySelector('#comment').oninput = (e) => { d.comment = e.target.value; persist(); };
     const loadExpected = async () => {
       rowsEl.innerHTML = '<p class="hint">Загрузка остатков из iiko…</p>';
       try {
         const rows = await api(`/api/stock?stores=${d.storeId}&date=${d.date}`);
         expected = {}; withRows = new Set();
         rows.forEach(x => { expected[x.productId] = r3((expected[x.productId] || 0) + x.amount); withRows.add(x.productId); });
-        drawRows();
-      } catch (e) { rowsEl.innerHTML = `<div class="empty">${h(e.message)}</div>`; }
+      } catch (e) { toast('Остатки не загрузились: ' + e.message); }
+      drawRows();
     };
-    rowsEl.oninput = (e) => {
-      const row = e.target.closest('.cnt-row'); if (!row) return;
-      const v = e.target.value.trim();
-      if (v === '') delete d.actual[row.dataset.id]; else d.actual[row.dataset.id] = v;
-      row.querySelector('.d').innerHTML = diffText(row.dataset.id);
-      updateCount();
-      persist();
-    };
-    el.querySelector('#q').oninput = drawRows;
-    el.querySelector('#comment').oninput = (e) => { d.comment = e.target.value; persist(); };
     el.querySelector('#storeId').onchange = async (e) => {
       if (Object.keys(d.actual).length && !(await ask('Смена склада очистит введённые количества. Продолжить?'))) { e.target.value = d.storeId; return; }
       d.storeId = e.target.value; d.actual = {}; rememberStore(d.storeId); persist(); loadExpected();
     };
     el.querySelector('#date').onchange = (e) => { d.date = e.target.value || today(); persist(); loadExpected(); };
-    el.querySelector('#fill').onclick = () => {
-      withRows.forEach(id => { if (d.actual[id] == null && goods.some(p => p.id === id)) d.actual[id] = String(Math.max(0, expected[id] || 0)); });
-      drawRows();
-      persist();
+    el.querySelector('#fill').onclick = async () => {
+      const ids = [...withRows].filter(id => d.actual[id] == null && ix.byId.has(id));
+      if (!ids.length) return toast('Пустых позиций с остатком нет');
+      if (!(await ask(`Заполнить ${ids.length} непосчитанных позиций количеством «по учёту»?`))) return;
+      ids.forEach(id => { d.actual[id] = String(Math.max(0, expected[id] || 0)).replace('.', ','); });
+      persist(); drawRows();
+    };
+    /* Импорт: фото и Excel */
+    const importLines = (lines, source, note) => {
+      if (!lines.length) return notify(`${source}: не нашлось ни одной строки с количеством.${note ? '\n' + note : ''}`);
+      go('ikInvReview', { lines, source, note, target: d });
+    };
+    const runPhoto = async (files) => {
+      try { const res = await recognizePhotos(files); importLines(res.lines, 'Фото', res.note); } catch (e) { notify(e.message); }
+    };
+    const runExcel = async (file) => {
+      toast('Читаю файл…');
+      try { importLines(await readInvExcel(file), 'Excel'); } catch (e) { notify('Не удалось прочитать файл: ' + e.message); }
+    };
+    const fPhoto = el.querySelector('#fPhoto'), fXls = el.querySelector('#fXls');
+    el.querySelector('#addPhoto').onclick = () => fPhoto.click();
+    el.querySelector('#addXls').onclick = () => fXls.click();
+    fPhoto.onchange = () => { const f = [...fPhoto.files]; fPhoto.value = ''; if (f.length) runPhoto(f); };
+    fXls.onchange = () => { const f = fXls.files[0]; fXls.value = ''; if (f) runExcel(f); };
+    el.querySelector('#blank').onclick = () => {
+      const store = (depStores().find(s => s.id === d.storeId) || {}).name || '';
+      const rows = [['Тип', 'Группа', 'Наименование', 'Артикул', 'Ед.', 'По учёту', 'Факт', 'ID']];
+      all.slice().sort(byKeys('type', 'group', 'name')).forEach(p => rows.push([
+        p.type === 'PREPARED' ? 'Заготовка' : 'Товар', p.group, p.name, p.num, p.unit, r3(expected[p.id] || 0), '', p.id]));
+      downloadXlsx([{ title: 'Инвентаризация', rows }], `Бланк инвентаризации ${store}`);
     };
     const drop = el.querySelector('#dropDraft');
     if (drop) drop.onclick = async () => {
@@ -1624,9 +2025,10 @@ function ikInventoryView(el, r) {
       if (!d.date) return notify('Укажите дату');
       const items = [];
       for (const [id, v] of Object.entries(d.actual)) {
-        const a = num(v);
-        const p = goods.find(x => x.id === id);
-        if (isNaN(a) || a < 0) return notify(`Неверное количество: ${p ? p.name : id}`);
+        const a = calc(v);
+        const p = ix.byId.get(id);
+        if (!p) continue;
+        if (isNaN(a) || a < 0) return notify(`Неверное количество: ${p.name} — «${v}»`);
         items.push({ productId: id, amount: r3(a) });
       }
       if (!items.length) return notify('Введите количество хотя бы по одной позиции');
@@ -1645,9 +2047,90 @@ function ikInventoryView(el, r) {
         btn.disabled = false; btn.textContent = 'Отправить в iiko';
       }
     };
+    persist();
     await loadExpected();
+    if (r.pending) {
+      const pd = r.pending; r.pending = null;
+      if (pd.kind === 'photo') runPhoto(pd.files); else if (pd.kind === 'excel') runExcel(pd.file);
+    }
   });
 }
+
+/* ---------- Проверка результата импорта (фото / Excel) ---------- */
+VIEWS.ikInvReview = (el, r) => {
+  const ix = invIndex();
+  if (!r.rows) {
+    r.rows = r.lines.map(l => {
+      const m = matchLine(l);
+      return { text: l.text, src: l.src || '', qty: l.qty, label: m.p ? ix.labelOf.get(m.p.id) : '', st: m.st, on: m.st !== 'none' };
+    });
+    r.mode = 'replace';
+  }
+  const cnt = (st) => r.rows.filter(x => x.st === st).length;
+  el.innerHTML = `
+    <h1>Проверьте результат</h1>
+    <p class="sub">${h(r.source)} · ${r.rows.length} ${plural(r.rows.length, 'строка', 'строки', 'строк')}:
+      ✅ ${cnt('ok')} · ⚠️ проверить ${cnt('warn')} · ❌ не найдено ${cnt('none')}</p>
+    ${r.note ? `<div class="banner">ℹ️ <span>${h(r.note)}</span></div>` : ''}
+    <p class="hint">Жёлтые — проверьте, правильно ли подобран товар. Красные — выберите товар сами или снимите галочку. Количество можно исправить.</p>
+    <label>Если позиция уже посчитана</label>
+    ${chipsHtml([['replace', 'Заменить'], ['add', 'Прибавить']], r.mode, 'mode')}
+    <datalist id="invdl">${[...ix.byLabel.keys()].map(l => `<option value="${h(l)}">`).join('')}</datalist>
+    <div id="rv">${r.rows.map((x, i) => `
+      <div class="rv ${x.st} ${x.on ? '' : 'off'}" data-i="${i}">
+        <div class="rv-src"><span>«${h(x.text)}»</span><span>${h(x.src)}</span></div>
+        <div class="rv-row">
+          <input class="l-prod" list="invdl" placeholder="Выберите товар" value="${h(x.label)}">
+          <input class="l-qty" inputmode="decimal" value="${h(x.qty)}" placeholder="кол-во">
+          <input type="checkbox" class="l-on" ${x.on ? 'checked' : ''} title="Добавить">
+        </div>
+      </div>`).join('')}</div>
+    <button class="btn wide" id="apply"></button>
+    <button class="btn ghost wide" id="cancel" style="margin-top:8px">Отмена</button>`;
+  const btn = el.querySelector('#apply');
+  const upd = () => { const n = r.rows.filter(x => x.on).length; btn.textContent = `Добавить в инвентаризацию (${n})`; btn.disabled = !n; };
+  el.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
+    r.mode = b.dataset.mode;
+    el.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x === b));
+  });
+  el.querySelector('#rv').oninput = el.querySelector('#rv').onchange = (e) => {
+    const card = e.target.closest('.rv'); if (!card) return;
+    const x = r.rows[+card.dataset.i];
+    if (e.target.classList.contains('l-prod')) {
+      x.label = e.target.value;
+      const ok = ix.byLabel.has(x.label);
+      x.st = ok ? 'ok' : 'none';
+      if (ok && e.type === 'change') x.on = true;
+      card.className = `rv ${x.st} ${x.on ? '' : 'off'}`;
+      card.querySelector('.l-on').checked = x.on;
+    } else if (e.target.classList.contains('l-qty')) x.qty = e.target.value;
+    else if (e.target.classList.contains('l-on')) { x.on = e.target.checked; card.classList.toggle('off', !x.on); }
+    upd();
+  };
+  el.querySelector('#cancel').onclick = back;
+  btn.onclick = () => {
+    const acc = new Map();
+    for (const x of r.rows.filter(x => x.on)) {
+      const p = ix.byLabel.get(x.label);
+      if (!p) return notify(`Выберите товар для строки «${x.text}» или снимите галочку`);
+      const n = calc(x.qty);
+      if (isNaN(n) || n < 0) return notify(`Проверьте количество: «${x.text}» — «${x.qty}»`);
+      const q = String(x.qty).trim();
+      acc.set(p.id, acc.has(p.id) ? acc.get(p.id) + '+' + q : q);
+    }
+    const d = r.target;
+    d.actual = d.actual || {};
+    let added = 0, merged = 0;
+    acc.forEach((q, id) => {
+      if (d.actual[id] != null && r.mode === 'add') { d.actual[id] = d.actual[id] + '+' + q; merged++; }
+      else { d.actual[id] = q; added++; }
+    });
+    saveDraft('inventory', d);
+    back();
+    toast(`Добавлено позиций: ${added + merged}`);
+  };
+  upd();
+};
 
 VIEWS.ikItems = (el, r) => withLoading(el, async () => {
   const [products, stock] = await Promise.all([ikProducts(), api('/api/stock?stores=' + depStores().map(s => s.id).join(','))]);
