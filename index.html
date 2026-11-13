@@ -371,7 +371,7 @@ const HELP = {
     ? ['Приход товара (накладная)', '<ol><li>Выберите склад, куда пришёл товар, и поставщика.</li><li>Добавьте товары: начните вводить название и выберите из подсказок.</li><li>Количество — в единицах товара (кг, л, шт), цена — за одну такую единицу.</li><li>Нажмите «Отправить в iiko».</li></ol>Черновик сохраняется сам — можно выйти и вернуться позже.']
     : r.type === 'writeoff'
       ? ['Списание', 'Списание — когда товар ушёл со склада не через продажу: порча, питание персонала, представительские.<ol><li>Выберите склад и статью.</li><li>Добавьте товары и количество.</li><li>Нажмите «Отправить в iiko».</li></ol>Рядом с товаром видно, сколько его на складе. Черновик сохраняется сам.']
-      : ['Инвентаризация', '<ol><li>Выберите склад и вкладку: «Товары» или «Заготовки».</li><li>Откройте группу и нажмите на позицию — появится калькулятор. Можно писать «(12+3)*8» или считать частями «12+3+5».</li><li>«Дальше ›» сразу открывает следующую позицию.</li><li>«Бланк» — скачать таблицу всех позиций, «Excel» — загрузить заполненную таблицу обратно.</li></ol>Пустые позиции не отправляются. Черновик сохраняется сам — считать можно в несколько заходов.'],
+      : ['Инвентаризация', '<ol><li>Выберите склад и вкладку: «Товары» или «Заготовки». Показываются только позиции этого склада; остальные — фильтр «Все позиции».</li><li>Откройте группу и нажмите на позицию — появится калькулятор. Можно писать «(12+3)*8» или считать частями «12+3+5».</li><li>«Дальше ›» сразу открывает следующую позицию.</li><li>«Бланк» — скачать таблицу всех позиций, «Excel» — загрузить заполненную таблицу обратно.</li></ol>Пустые позиции не отправляются. Черновик сохраняется сам — считать можно в несколько заходов.'],
   ikInvReview: ['Проверка распознанного', 'Зелёные строки подобраны уверенно, жёлтые — проверьте товар, красные — товар не найден: выберите его из списка или снимите галочку. Потом нажмите «Добавить в инвентаризацию».'],
   ikExport: ['Выгрузка', 'Скачать остатки или номенклатуру в Excel. Если на телефоне файл не скачивается — нажмите «Копировать» и вставьте в таблицу.'],
   unit: ['Учёт в приложении', 'Здесь учёт ведётся прямо в приложении: заведите товары в «Номенклатуре», дальше — накладные, списания и инвентаризации. Остатки посчитаются сами.'],
@@ -1859,11 +1859,15 @@ function ikInventoryView(el, r) {
     const d = r.draft;
     d.actual = d.actual || {};
     r.tab = r.tab || 'GOODS';
-    r.filter = r.filter || 'all';
+    r.filter = r.filter || 'store';
     r.open = r.open || new Set();
     const persist = () => saveDraft('inventory', d);
     let expected = {}, withRows = new Set(), visible = [];
-    const INV_FILTERS = [['all', 'Все'], ['stock', 'Есть на складе'], ['todo', 'Не посчитано'], ['done', 'Посчитано']];
+    let storeSet = null; // позиции склада (движение за полгода); null — сервер не сообщил, показываем всё
+    const INV_FILTERS = [['store', 'Этот склад'], ['todo', 'Не посчитано'], ['done', 'Посчитано'], ['stock', 'Есть остаток'], ['all', 'Все позиции']];
+    const inStore = (p) => !storeSet || storeSet.has(p.id) || withRows.has(p.id) || d.actual[p.id] != null;
+    const inScope = (p) => r.filter === 'all' || inStore(p);
+    const grouped = () => ['store', 'all'].includes(r.filter) && !norm(r.q).trim();
     el.innerHTML = `
       ${r.restored ? draftBanner('inventory', d) : ''}
       <h1>Инвентаризация</h1>
@@ -1907,7 +1911,7 @@ function ikInventoryView(el, r) {
     const updateCount = () => {
       el.querySelector('#cnt').textContent = Object.keys(d.actual).length;
       el.querySelectorAll('.seg button').forEach(b => {
-        const tab = b.dataset.tab, list = all.filter(p => p.type === tab);
+        const tab = b.dataset.tab, list = all.filter(p => p.type === tab && inScope(p));
         b.classList.toggle('on', tab === r.tab);
         b.querySelector('small').textContent = `${list.filter(p => d.actual[p.id] != null).length}/${list.length}`;
       });
@@ -1918,10 +1922,10 @@ function ikInventoryView(el, r) {
       const q = norm(r.q).trim();
       const list = all.filter(p => p.type === r.tab
         && (!q || norm(p.name + ' ' + p.group + ' ' + p.num).includes(q))
-        && (r.filter === 'all' || (r.filter === 'stock' && withRows.has(p.id))
-          || (r.filter === 'done' && d.actual[p.id] != null) || (r.filter === 'todo' && d.actual[p.id] == null)))
+        && (r.filter === 'all' || (r.filter === 'store' && inStore(p)) || (r.filter === 'stock' && withRows.has(p.id))
+          || (r.filter === 'done' && d.actual[p.id] != null) || (r.filter === 'todo' && inStore(p) && d.actual[p.id] == null)))
         .sort(byKeys('group', 'name'));
-      const flat = !!q || r.filter !== 'all';
+      const flat = !grouped();
       const groups = new Map();
       list.forEach(p => { const g = p.group || 'Без группы'; if (!groups.has(g)) groups.set(g, []); groups.get(g).push(p); });
       let html = '', shown = 0;
@@ -1938,7 +1942,11 @@ function ikInventoryView(el, r) {
         }
       });
       rowsEl.innerHTML = html + (shown >= 400 ? '<p class="hint">Показаны первые 400 позиций. Уточните поиск.</p>' : '')
-        + (list.length ? '' : `<div class="empty">${q ? 'Ничего не найдено' : 'Здесь пока пусто'}</div>`);
+        + (list.length ? '' : `<div class="empty">${q ? 'Ничего не найдено' : 'Здесь пока пусто'}`
+          + (r.filter !== 'all' ? '<br><button class="btn ghost sm" id="toAll" style="margin-top:10px">Искать во всех позициях</button>' : '') + '</div>')
+        + (r.filter === 'store' && storeSet && list.length ? '<p class="hint">Показаны позиции, которые были на этом складе за последние полгода. Нет нужной — нажмите «Все позиции».</p>' : '');
+      const toAll = rowsEl.querySelector('#toAll');
+      if (toAll) toAll.onclick = () => { r.filter = 'all'; drawRows(); };
       updateCount();
     };
     const ctx = {
@@ -1948,14 +1956,14 @@ function ikInventoryView(el, r) {
         if (v == null) delete d.actual[id]; else d.actual[id] = v;
         persist();
         const row = rowsEl.querySelector(`.inv-row[data-id="${id}"]`);
-        if (row && r.filter === 'all') { row.outerHTML = rowHtml(ix.byId.get(id)); refreshGroupCounts(); updateCount(); }
+        if (row && grouped()) { row.outerHTML = rowHtml(ix.byId.get(id)); refreshGroupCounts(); updateCount(); }
         else drawRows();
       },
       hasNext: (id) => visible.findIndex(p => p.id === id) < visible.length - 1,
       next: (id) => { const i = visible.findIndex(p => p.id === id); return i >= 0 ? visible[i + 1] : null; },
     };
     const refreshGroupCounts = () => rowsEl.querySelectorAll('.grp').forEach(b => {
-      const items = all.filter(p => p.type === r.tab && (p.group || 'Без группы') === b.dataset.g);
+      const items = all.filter(p => p.type === r.tab && inScope(p) && (p.group || 'Без группы') === b.dataset.g);
       const done = items.filter(p => d.actual[p.id] != null).length;
       b.querySelector('.cnt').textContent = `${done}/${items.length}`;
       b.classList.toggle('full', done === items.length);
@@ -1963,7 +1971,7 @@ function ikInventoryView(el, r) {
     rowsEl.onclick = (e) => {
       const g = e.target.closest('.grp');
       if (g) {
-        if (r.q || r.filter !== 'all') return;
+        if (!grouped()) return;
         r.open.has(g.dataset.g) ? r.open.delete(g.dataset.g) : r.open.add(g.dataset.g);
         drawRows(); return;
       }
@@ -1976,7 +1984,11 @@ function ikInventoryView(el, r) {
     const loadExpected = async () => {
       rowsEl.innerHTML = '<p class="hint">Загрузка остатков из iiko…</p>';
       try {
-        const rows = await api(`/api/stock?stores=${d.storeId}&date=${d.date}`);
+        const [rows, si] = await Promise.all([
+          api(`/api/stock?stores=${d.storeId}&date=${d.date}`),
+          api(`/api/store-items?store=${d.storeId}`).catch(() => null), // старый сервер — без фильтра по складу
+        ]);
+        storeSet = si && si.ids && si.ids.length ? new Set(si.ids) : null;
         expected = {}; withRows = new Set();
         rows.forEach(x => { expected[x.productId] = r3((expected[x.productId] || 0) + x.amount); withRows.add(x.productId); });
       } catch (e) { toast('Остатки не загрузились: ' + e.message); }
@@ -2014,7 +2026,7 @@ function ikInventoryView(el, r) {
     el.querySelector('#blank').onclick = () => {
       const store = (depStores().find(s => s.id === d.storeId) || {}).name || '';
       const rows = [['Тип', 'Группа', 'Наименование', 'Артикул', 'Ед.', 'По учёту', 'Факт', 'ID']];
-      all.slice().sort(byKeys('type', 'group', 'name')).forEach(p => rows.push([
+      all.filter(inStore).sort(byKeys('type', 'group', 'name')).forEach(p => rows.push([
         p.type === 'PREPARED' ? 'Заготовка' : 'Товар', p.group, p.name, p.num, p.unit, r3(expected[p.id] || 0), '', p.id]));
       downloadXlsx([{ title: 'Инвентаризация', rows }], `Бланк инвентаризации ${store}`);
     };
