@@ -252,6 +252,10 @@
     .today { color: var(--hint); font-size: 14px; white-space: nowrap; }
     .searchbox { margin-left: auto; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 0; border-radius: 10px; background: var(--card); color: var(--hint); font: inherit; font-size: 14px; cursor: pointer; }
     .searchbox span, .searchbox kbd { display: none; }
+    .iconbtn { flex: 0 0 auto; width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 10px; background: var(--card); color: var(--hint); cursor: pointer; }
+    .iconbtn:hover { color: var(--accent); }
+    @media (max-width: 420px) { .today { display: none; } }
+    .iconbtn .ico { width: 19px; height: 19px; }
     .searchbox kbd { font: inherit; font-size: 11px; padding: 1px 6px; border-radius: 5px; border: 1px solid var(--line); }
     .view { position: relative; max-width: 760px; margin: 0 auto; padding: 14px 16px calc(96px + env(safe-area-inset-bottom)); }
     .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; display: flex; background: var(--bg); border-top: 1px solid var(--line); padding: 4px 4px calc(4px + env(safe-area-inset-bottom)); }
@@ -3034,6 +3038,7 @@ function shellHtml(r) {
         <div class="depseg">${deps.map(d => `<button data-dep="${d.id}" class="${d.id === IK.dep.id ? 'on' : ''}">${h(short(d.name))}</button>`).join('')}</div>
         <span class="today">${todayLabel()}</span>
         <button class="searchbox" id="gs" aria-label="Поиск">${ico('search')}<span>Товар, блюдо…</span><kbd>Ctrl K</kbd></button>
+        <button class="iconbtn" data-theme-btn title="${THEMES[themePref()][1]}" aria-label="Сменить тему">${ico(THEMES[themePref()][0])}</button>
       </header>
       <div id="view" class="view ${r.view === 'ikHome' ? 'wide' : ''}"></div>
     </div>
@@ -3048,6 +3053,7 @@ function bindShell() {
   $app.querySelectorAll('[data-dep]').forEach(b => b.onclick = () => switchDep(b.dataset.dep));
   $app.querySelector('[data-units]').onclick = toUnits;
   $app.querySelector('#gs').onclick = globalSearch;
+  $app.querySelectorAll('[data-theme-btn]').forEach(b => b.onclick = cycleTheme);
   $app.querySelector('[data-more]').onclick = () => {
     const sh = openSheet(`<h2>Ещё</h2>
       ${NAV.map((n, i) => n.tab ? '' : `<button class="nav" data-i="${i}">${ico(n.icon)}<span>${n.title}</span></button>`).join('')}
@@ -3091,8 +3097,20 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* Тема: тёмная, если в Telegram ночной режим (или в системе) */
+/* Тема: «авто» (как в Telegram / системе), «светлая» или «тёмная» — выбор запоминается */
+const THEMES = { auto: ['sun-moon', 'Тема: как в Telegram'], light: ['sun', 'Тема: светлая'], dark: ['moon', 'Тема: тёмная'] };
+const themePref = () => { const t = lsGet('theme'); return THEMES[t] ? t : 'auto'; };
+function cycleTheme() {
+  const order = ['auto', 'light', 'dark'];
+  const next = order[(order.indexOf(themePref()) + 1) % order.length];
+  lsSet('theme', next); haptic(); applyTheme();
+  document.querySelectorAll('[data-theme-btn]').forEach(b => { b.innerHTML = ico(THEMES[next][0]); b.title = THEMES[next][1]; });
+  toast(THEMES[next][1]);
+}
 function applyTheme() {
-  const dark = tg && tg.colorScheme ? tg.colorScheme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  const pref = themePref();
+  const dark = pref !== 'auto' ? pref === 'dark'
+    : tg && tg.colorScheme ? tg.colorScheme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
   try { if (tg && tg.setHeaderColor) { tg.setHeaderColor(bg); tg.setBackgroundColor(bg); } } catch (e) { /* старый Telegram */ }
