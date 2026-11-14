@@ -144,6 +144,8 @@
     .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; margin: 14px 0 10px; border-radius: 12px; background: var(--card); }
     .seg button { padding: 10px 6px; border: 0; border-radius: 10px; background: none; color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
     .seg.s3 { grid-template-columns: repeat(3, 1fr); }
+    .h-date { font-weight: 500; color: var(--hint); font-size: .75em; white-space: nowrap; }
+    .banner .btn.danger { color: var(--danger); }
     .inv-row.no-ttk .t-main > div:first-child { color: var(--hint); }
     .ttk-head { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 12px; margin: 12px 0; border-radius: 12px; background: var(--card); font-size: 14px; color: var(--hint); }
     .ttk-head b { color: var(--text); }
@@ -1752,9 +1754,11 @@ function invStart() {
   const dr = loadDraft('inventory'), n = draftSize('inventory', dr);
   const sh = openSheet(`
     <h2>Начать инвентаризацию</h2>
-    <p class="sub">Как будете считать?</p>
-    ${n ? `<div class="banner">📝 <span>Есть незаконченная инвентаризация: ${n} поз. Новые данные добавятся в неё.</span>
-      <button class="btn sm" data-m="continue">Открыть</button></div>` : ''}
+    ${n ? `<div class="banner">📝 <span>Есть незаконченная инвентаризация на ${fDate(dr.date)}: ${n} поз. Новые данные добавятся в неё.</span>
+      <button class="btn sm" data-m="continue">Открыть</button><button class="btn sm ghost danger" data-m="drop">Удалить</button></div>` : ''}
+    <label>Дата инвентаризации</label>
+    <input type="date" id="invDate" value="${h((n && dr.date) || today())}">
+    <p class="sub" style="margin-top:14px">Как будете считать?</p>
     <div class="pick">
       ${PHOTO_ENABLED ? `<button data-m="photo"><span class="e">📷</span><span><b>Загрузить фото</b>
         <small>Сфотографируйте лист пересчёта или выберите фото из галереи — позиции и количество распознаются сами</small></span></button>` : ''}
@@ -1765,13 +1769,25 @@ function invStart() {
     </div>
     <input type="file" id="fPhoto" accept="image/*" multiple hidden>
     <input type="file" id="fXls" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" hidden>`);
-  const open = (pending) => { sh.close(); go('ikDoc', { type: 'inventory', pending }); };
+  const dateEl = sh.el.querySelector('#invDate');
+  const open = (pending) => {
+    const date = dateEl.value || today();
+    const cur = loadDraft('inventory');
+    if (cur && draftSize('inventory', cur) && cur.date !== date) saveDraft('inventory', { ...cur, date });
+    sh.close();
+    go('ikDoc', { type: 'inventory', pending, date });
+  };
   const fPhoto = sh.el.querySelector('#fPhoto'), fXls = sh.el.querySelector('#fXls');
   fPhoto.onchange = () => fPhoto.files.length && open({ kind: 'photo', files: [...fPhoto.files] });
   fXls.onchange = () => fXls.files.length && open({ kind: 'excel', file: fXls.files[0] });
   sh.el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => {
     const m = b.dataset.m;
-    if (m === 'photo') fPhoto.click();
+    if (m === 'drop') {
+      ask(`Удалить незаконченную инвентаризацию на ${fDate(dr.date)} (${n} поз.)? Введённые количества пропадут.`).then(ok => {
+        if (!ok) return;
+        clearDraft('inventory'); sh.close(); toast('Инвентаризация удалена'); invStart();
+      });
+    } else if (m === 'photo') fPhoto.click();
     else if (m === 'excel') fXls.click();
     else open(null);
   });
@@ -1929,7 +1945,7 @@ function ikInventoryView(el, r) {
     if (!r.draft) {
       const saved = loadDraft('inventory');
       if (saved && draftSize('inventory', saved)) { r.draft = saved; r.restored = true; }
-      else r.draft = { storeId: lastStore(), date: today(), comment: '', actual: {} };
+      else r.draft = { storeId: lastStore(), date: r.date || today(), comment: '', actual: {} };
       if (!depStores().some(s => s.id === r.draft.storeId)) r.draft.storeId = lastStore();
     }
     const d = r.draft;
@@ -1946,11 +1962,12 @@ function ikInventoryView(el, r) {
     const grouped = () => ['store', 'all'].includes(r.filter) && !norm(r.q).trim();
     el.innerHTML = `
       ${r.restored ? draftBanner('inventory', d) : ''}
-      <h1>Инвентаризация</h1>
+      <h1>Инвентаризация <span id="hDate" class="h-date">на ${fDate(d.date)}</span></h1>
       <p class="sub">${h(IK.dep.name)} · уйдёт в iiko без проведения</p>
+      <div id="dateWarn"></div>
       <div class="grid2">
         <div><label>Склад</label><select id="storeId">${storeOptions(d.storeId)}</select></div>
-        <div><label>Дата</label><input id="date" type="date" value="${h(d.date)}"></div>
+        <div><label>Дата инвентаризации</label><input id="date" type="date" value="${h(d.date)}"></div>
       </div>
       <div class="inv-tools">
         ${PHOTO_ENABLED ? '<button class="btn ghost sm" id="addPhoto">📷 Фото</button>' : ''}
@@ -1966,7 +1983,14 @@ function ikInventoryView(el, r) {
       <button class="btn ghost wide" id="fill" style="margin-top:8px">Заполнить пустые по учёту</button>
       <label>Комментарий</label>
       <input id="comment" value="${h(d.comment)}" placeholder="Необязательно">
+      <button class="btn danger wide" id="delInv" style="margin-top:12px">🗑 Удалить инвентаризацию</button>
       <div class="inv-bar"><span>Посчитано<br><b id="cnt">0</b></span><button class="btn" id="send">Отправить в iiko</button></div>`;
+    const showDate = () => {
+      el.querySelector('#hDate').textContent = 'на ' + fDate(d.date);
+      el.querySelector('#dateWarn').innerHTML = d.date !== today()
+        ? `<div class="banner">🗓 <span>Инвентаризация на <b>${fDate(d.date)}</b>, а сегодня ${fDate(today())}. Если считаете сегодня — поменяйте дату ниже.</span></div>` : '';
+    };
+    showDate();
     const rowsEl = el.querySelector('#rows');
     const val = (id) => calc(d.actual[id]);
     const diffText = (id) => {
@@ -2074,7 +2098,14 @@ function ikInventoryView(el, r) {
       if (Object.keys(d.actual).length && !(await ask('Смена склада очистит введённые количества. Продолжить?'))) { e.target.value = d.storeId; return; }
       d.storeId = e.target.value; d.actual = {}; rememberStore(d.storeId); persist(); loadExpected();
     };
-    el.querySelector('#date').onchange = (e) => { d.date = e.target.value || today(); persist(); loadExpected(); };
+    el.querySelector('#date').onchange = (e) => { d.date = e.target.value || today(); persist(); showDate(); loadExpected(); };
+    el.querySelector('#delInv').onclick = async () => {
+      const n = Object.keys(d.actual).length;
+      if (!(await ask(`Удалить эту инвентаризацию${n ? ` (посчитано ${n} поз.)` : ''}? Введённые количества пропадут.\nВ iiko ничего не отправлялось — удаляется только черновик в приложении.`))) return;
+      clearDraft('inventory'); r.draft = null;
+      toast('Инвентаризация удалена');
+      back();
+    };
     el.querySelector('#fill').onclick = async () => {
       const ids = [...withRows].filter(id => d.actual[id] == null && ix.byId.has(id));
       if (!ids.length) return toast('Пустых позиций с остатком нет');
@@ -2123,7 +2154,7 @@ function ikInventoryView(el, r) {
       }
       if (!items.length) return notify('Введите количество хотя бы по одной позиции');
       const storeName = (depStores().find(s => s.id === d.storeId) || {}).name || '';
-      if (!(await ask(`Отправить инвентаризацию в iiko: ${storeName}, позиций: ${items.length}?\nДокумент будет создан без проведения.`))) return;
+      if (!(await ask(`Отправить инвентаризацию в iiko: ${storeName}, на ${fDate(d.date)}, позиций: ${items.length}?\nДокумент будет создан без проведения.`))) return;
       const btn = ev.target;
       btn.disabled = true; btn.textContent = 'Отправляю…';
       try {
