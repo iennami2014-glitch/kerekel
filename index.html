@@ -144,6 +144,15 @@
     .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; margin: 14px 0 10px; border-radius: 12px; background: var(--card); }
     .seg button { padding: 10px 6px; border: 0; border-radius: 10px; background: none; color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
     .seg.s3 { grid-template-columns: repeat(3, 1fr); }
+    .seg.s4 { grid-template-columns: repeat(4, 1fr); }
+    .seg.s4 button { padding: 9px 2px; font-size: 13px; }
+    .pchart { margin: 12px 0; padding: 10px 12px; border-radius: 12px; background: var(--card); }
+    .pchart svg { display: block; width: 100%; height: 150px; }
+    .pchart-y, .pchart-x { display: flex; justify-content: space-between; font-size: 12px; color: var(--hint); }
+    .pchart-y { margin-bottom: 4px; }
+    .pchart-x { margin-top: 4px; }
+    .pchart-leg { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: 13px; }
+    .pchart-leg i { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 50%; }
     .h-date { font-weight: 500; color: var(--hint); font-size: .75em; white-space: nowrap; }
     .banner .btn.danger { color: var(--danger); }
     .inv-row.no-ttk .t-main > div:first-child { color: var(--hint); }
@@ -1254,6 +1263,7 @@ VIEWS.ikHome = (el) => {
     <div class="section-title">Посмотреть</div>
     ${tile('ikStock', '📊', 'Остатки', 'Сейчас или на любую дату')}
     ${tile('ikJournal', '🗂', 'Журнал документов', 'Все документы по дням')}
+    ${tile('ikPrices', '📈', 'Цены поставщиков', 'Что подорожало и подешевело, история закупок')}
     ${tile('ikTtk', '📖', 'Техкарты', 'Блюда, заготовки, модификаторы — просмотр и изменение')}
     ${tile('ikItems', '📦', 'Номенклатура', 'Товары, артикулы, единицы')}
     ${tile('ikExport', '📥', 'Выгрузка в Excel', 'Остатки и товары таблицей')}`;
@@ -2622,6 +2632,152 @@ VIEWS.ikTtkCard = (el, r) => withLoading(el, async () => {
     };
   };
   drawItems();
+});
+
+/* ---------- Динамика закупочных цен (по приходным накладным) ---------- */
+const PRICE_PERIODS = [['30', 'Месяц'], ['90', '3 мес'], ['180', 'Полгода'], ['365', 'Год']];
+const PRICE_FILTERS = [['up', 'Дороже'], ['down', 'Дешевле'], ['check', '⚠️ Проверить'], ['all', 'Все']];
+const SUP_COLORS = ['#2481cc', '#e8833a', '#2e9e4f', '#9b51e0', '#d64545', '#1aa3a3', '#b8860b', '#666'];
+const fPrice = (n) => n == null ? '—' : n.toLocaleString('ru-RU', { maximumFractionDigits: n >= 100 ? 0 : 2 }) + ' ₽';
+const fPct = (x) => (x > 0 ? '+' : '') + Math.round(x) + '%';
+const odd = (a, b) => a > 0 && b > 0 && (a / b > 3 || b / a > 3);   // скачок в разы — похоже на ошибку в единицах накладной
+
+async function ikPriceData(days) {
+  IK.prices = IK.prices || {};
+  const key = IK.dep.id + ':' + days;
+  if (!IK.prices[key]) {
+    IK.prices[key] = await api(`/api/prices?days=${days}&stores=${depStores().map(s => s.id).join(',')}`).catch(e => {
+      throw /Not Found|404/.test(e.message) ? new Error('Сервер ещё старой версии. Перезапустите start.cmd и откройте раздел снова.') : e;
+    });
+  }
+  return IK.prices[key];
+}
+
+/* По каждому товару: последняя закупка и предыдущая у того же поставщика */
+function priceSummary(data) {
+  const by = new Map();
+  data.points.forEach(([pid, s, date, price, amount, store, num]) => {
+    if (!by.has(pid)) by.set(pid, []);
+    by.get(pid).push({ s, date, price, amount, store, num });
+  });
+  const out = [];
+  by.forEach((list, pid) => {
+    const last = list[list.length - 1];
+    const same = list.filter(x => x.s === last.s);
+    const prev = same.length > 1 ? same[same.length - 2] : null;
+    const prices = list.map(x => x.price);
+    out.push({ pid, list, last, prev, change: prev && prev.price ? (last.price - prev.price) / prev.price * 100 : null,
+      min: Math.min(...prices), max: Math.max(...prices), sups: new Set(list.map(x => x.s)).size });
+  });
+  return out;
+}
+
+VIEWS.ikPrices = (el, r) => withLoading(el, async () => {
+  r.days = r.days || '90';
+  r.filter = r.filter || 'up';
+  const [products, data] = await Promise.all([ikProducts(), ikPriceData(r.days)]);
+  const pm = new Map(products.map(p => [p.id, p]));
+  const rows = priceSummary(data).filter(x => pm.has(x.pid));
+  const isOdd = (x) => x.prev && odd(x.last.price, x.prev.price);
+  const up = rows.filter(x => x.change != null && x.change >= 3 && !isOdd(x));
+  const down = rows.filter(x => x.change != null && x.change <= -3 && !isOdd(x));
+  const check = rows.filter(isOdd);
+  const lists = { up, down, check, all: rows };
+  el.innerHTML = `
+    <h1>Цены поставщиков</h1>
+    <p class="sub">${h(IK.dep.name)} · по приходным накладным · сравнение последней поставки с предыдущей у того же поставщика</p>
+    ${chipsHtml(PRICE_PERIODS, r.days, 'days')}
+    <div class="seg s4">${PRICE_FILTERS.map(([k, l]) => `<button data-f="${k}" class="${k === r.filter ? 'on' : ''}">${l}<br><small>${lists[k].length}</small></button>`).join('')}</div>
+    <p class="hint" id="fHint"></p>
+    <div class="grid2">
+      <div><select id="sup"><option value="">Все поставщики</option>${data.suppliers.map((s, i) => `<option value="${i}" ${String(i) === r.sup ? 'selected' : ''}>${h(s)}</option>`).join('')}</select></div>
+      <div class="search" style="margin:0"><input id="q" type="search" placeholder="Товар" value="${h(r.q || '')}"></div>
+    </div>
+    <div id="rows" style="margin-top:10px"></div>`;
+  const rowsEl = el.querySelector('#rows');
+  const draw = () => {
+    const q = norm(r.q).trim();
+    el.querySelector('#fHint').textContent = r.filter === 'check'
+      ? 'Цена изменилась в разы — чаще всего в накладной перепутаны единицы (штуки вместо упаковок, граммы вместо кг). Откройте позицию и проверьте накладную.' : '';
+    let list = lists[r.filter];
+    if (r.sup) list = list.filter(x => x.list.some(y => String(y.s) === r.sup));
+    if (q) list = list.filter(x => norm(pm.get(x.pid).name).includes(q));
+    list = list.slice().sort(r.filter === 'all' ? (a, b) => pm.get(a.pid).name.localeCompare(pm.get(b.pid).name, 'ru')
+      : r.filter === 'down' ? (a, b) => a.change - b.change : (a, b) => Math.abs(b.change) - Math.abs(a.change));
+    rowsEl.innerHTML = list.slice(0, 300).map(x => {
+      const p = pm.get(x.pid), unit = p.unit ? '/' + h(p.unit) : '';
+      const warn = x.prev && odd(x.last.price, x.prev.price);
+      return `<button class="inv-row" data-id="${x.pid}">
+        <span class="t-main"><div>${h(p.name.trim())}</div>
+          <div class="cnt-meta">${h(data.suppliers[x.last.s])} · ${fDate(x.last.date)}<br>
+            ${x.prev ? `${fPrice(x.prev.price)} → <b>${fPrice(x.last.price)}</b>${unit}` : `<b>${fPrice(x.last.price)}</b>${unit} · одна закупка`}
+            ${warn ? ' · <span class="minus">⚠️ проверьте накладную</span>' : ''}</div></span>
+        <span class="inv-val ${x.change > 0 ? 'minus' : x.change < 0 ? 'plus' : ''}">${x.change != null ? fPct(x.change) : ''}</span>
+      </button>`;
+    }).join('') + (list.length > 300 ? '<p class="hint">Показаны первые 300. Уточните поиск.</p>' : '')
+      || `<div class="empty">${{ up: 'За этот период ничего не подорожало', down: 'За этот период ничего не подешевело', check: 'Подозрительных скачков нет' }[r.filter] || 'Закупок не найдено'}</div>`;
+  };
+  el.querySelectorAll('[data-days]').forEach(b => b.onclick = () => { r.days = b.dataset.days; render(); });
+  el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => {
+    r.filter = b.dataset.f;
+    el.querySelectorAll('[data-f]').forEach(x => x.classList.toggle('on', x === b));
+    draw();
+  });
+  el.querySelector('#sup').onchange = (e) => { r.sup = e.target.value; draw(); };
+  el.querySelector('#q').oninput = (e) => { r.q = e.target.value; draw(); };
+  rowsEl.onclick = (e) => { const b = e.target.closest('[data-id]'); if (b) go('ikPrice', { id: b.dataset.id, days: r.days }); };
+  draw();
+});
+
+function priceChart(list, suppliers) {
+  if (list.length < 2) return '';
+  const W = 320, H = 150, P = 6;
+  const t0 = Date.parse(list[0].date), t1 = Date.parse(list[list.length - 1].date) || t0 + 1;
+  const vals = list.map(x => x.price), lo = Math.min(...vals), hi = Math.max(...vals);
+  const x = (d) => P + (t1 > t0 ? (Date.parse(d) - t0) / (t1 - t0) : 0.5) * (W - 2 * P);
+  const y = (v) => H - P - (hi > lo ? (v - lo) / (hi - lo) : 0.5) * (H - 2 * P);
+  const sids = [...new Set(list.map(p => p.s))];
+  const lines = sids.map((s, k) => {
+    const pts = list.filter(p => p.s === s);
+    const c = SUP_COLORS[k % SUP_COLORS.length];
+    return `<polyline fill="none" stroke="${c}" stroke-width="2" points="${pts.map(p => `${x(p.date).toFixed(1)},${y(p.price).toFixed(1)}`).join(' ')}"/>`
+      + pts.map(p => `<circle cx="${x(p.date).toFixed(1)}" cy="${y(p.price).toFixed(1)}" r="3" fill="${c}"/>`).join('');
+  }).join('');
+  return `<div class="pchart"><div class="pchart-y"><span>мин. <b>${fPrice(lo)}</b></span><span>макс. <b>${fPrice(hi)}</b></span></div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${lines}</svg>
+    <div class="pchart-x"><span>${fDate(list[0].date)}</span><span>${fDate(list[list.length - 1].date)}</span></div>
+    ${sids.length > 1 ? `<div class="pchart-leg">${sids.map((s, k) => `<span><i style="background:${SUP_COLORS[k % SUP_COLORS.length]}"></i>${h(suppliers[s])}</span>`).join('')}</div>` : ''}</div>`;
+}
+
+VIEWS.ikPrice = (el, r) => withLoading(el, async () => {
+  const [products, data] = await Promise.all([ikProducts(), ikPriceData(r.days || '90')]);
+  const p = products.find(x => x.id === r.id) || { name: '?', unit: '' };
+  const list = data.points.filter(x => x[0] === r.id).map(([, s, date, price, amount, store, num]) => ({ s, date, price, amount, store, num }));
+  const unit = p.unit ? '/' + h(p.unit) : '';
+  const sids = [...new Set(list.map(x => x.s))];
+  const bySup = sids.map(s => {
+    const l = list.filter(x => x.s === s), pr = l.map(x => x.price);
+    return { s, last: l[l.length - 1], min: Math.min(...pr), max: Math.max(...pr), n: l.length };
+  }).sort((a, b) => a.last.price - b.last.price);
+  const prevOf = new Map();
+  const lastBy = {};
+  list.forEach((x, i) => { if (lastBy[x.s] != null) prevOf.set(i, list[lastBy[x.s]]); lastBy[x.s] = i; });
+  const storeName = (id) => (IK.meta.stores.find(s => s.id === id) || {}).name || '';
+  el.innerHTML = `
+    <h1>${h(p.name.trim())}</h1>
+    <p class="sub">Закупки за ${(PRICE_PERIODS.find(x => x[0] === (r.days || '90')) || [, ''])[1].toLowerCase()} · цена за ${h(p.unit || 'ед.')}</p>
+    ${priceChart(list, data.suppliers)}
+    <div class="section-title">По поставщикам${bySup.length > 1 ? ' · дешевле — выше' : ''}</div>
+    ${bySup.map((b, k) => `<div class="tile static"><span class="t-main"><div>${k === 0 && bySup.length > 1 ? '🏷 ' : ''}${h(data.suppliers[b.s])}</div>
+      <div class="t-desc">последняя ${fDate(b.last.date)} · закупок ${b.n}${b.n > 1 ? ` · от ${fPrice(b.min)} до ${fPrice(b.max)}` : ''}</div></span>
+      <span class="t-side"><b>${fPrice(b.last.price)}</b>${unit}</span></div>`).join('')}
+    <div class="section-title">Все закупки</div>
+    ${list.map((x, i) => ({ x, i })).reverse().map(({ x, i }) => {
+      const pv = prevOf.get(i), ch = pv && pv.price ? (x.price - pv.price) / pv.price * 100 : null;
+      return `<div class="rep-row"><span class="t-main"><div>${fDate(x.date)} · ${h(data.suppliers[x.s])}</div>
+        <div class="cnt-meta">${fQty(x.amount)} ${h(p.unit)} · № ${h(x.num)}${storeName(x.store) ? ' · ' + h(storeName(x.store)) : ''}${pv && odd(x.price, pv.price) ? ' · <span class="minus">⚠️ цена в разы отличается — проверьте единицы в накладной</span>' : ''}</div></span>
+        <span class="t-side"><b>${fPrice(x.price)}</b>${ch != null && Math.abs(ch) >= 1 ? `<div class="cnt-meta ${ch > 0 ? 'minus' : 'plus'}">${fPct(ch)}</div>` : ''}</span></div>`;
+    }).join('') || '<div class="empty">Закупок нет</div>'}`;
 });
 
 VIEWS.ikExport = (el) => {
