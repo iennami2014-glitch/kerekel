@@ -5,16 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Склад</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: var(--tg-theme-bg-color, #ffffff);
-      --text: var(--tg-theme-text-color, #1c1c1e);
-      --hint: var(--tg-theme-hint-color, #8e8e93);
-      --card: var(--tg-theme-secondary-bg-color, #f2f2f7);
-      --accent: var(--tg-theme-button-color, #2481cc);
-      --accent-text: var(--tg-theme-button-text-color, #ffffff);
-      --danger: var(--tg-theme-destructive-text-color, #e53935);
-      --ok: #2e9e4f;
+      --o: 216, 90, 48;
+      --accent: #D85A30; --accent-text: #ffffff;
+      --accent-soft: rgba(var(--o), .12); --accent-softer: rgba(var(--o), .05);
+      --bg: #ffffff; --text: #2a2421; --hint: #8c837d; --card: #f5f2ef; --line: rgba(60, 40, 30, .1);
+      --danger: #c8423b; --danger-soft: rgba(200, 66, 59, .12);
+      --ok: #2f8a4c; --ok-soft: rgba(47, 138, 76, .12);
+      --warn: #8f5d00; --warn-soft: rgba(224, 161, 0, .18);
+      --shadow: 0 1px 2px rgba(40, 20, 10, .06), 0 4px 14px rgba(40, 20, 10, .05);
+    }
+    :root[data-theme="dark"] {
+      --o: 236, 122, 80;
+      --accent: #EC7A50; --accent-soft: rgba(var(--o), .16); --accent-softer: rgba(var(--o), .06);
+      --bg: #1d1a18; --text: #f3eeea; --hint: #9d948e; --card: #2a2623; --line: rgba(255, 255, 255, .08);
+      --danger: #f07069; --danger-soft: rgba(240, 112, 105, .16);
+      --ok: #5cc27e; --ok-soft: rgba(92, 194, 126, .15);
+      --warn: #f0bd55; --warn-soft: rgba(240, 189, 85, .16);
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3);
     }
     * { box-sizing: border-box; }
     body {
@@ -208,6 +220,117 @@
     .rv-row input[type=checkbox] { width: 22px; height: 22px; margin: 0; }
     .spin { width: 40px; height: 40px; margin: 14px auto; border: 4px solid var(--card); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .pick .e { background: var(--accent-soft); color: var(--accent); }
+    .pick .e .ico { width: 26px; height: 26px; }
+    /* ===== Новый дизайн: иконки, каркас, главная ===== */
+    body { font-family: Manrope, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-variant-numeric: tabular-nums; }
+    .ico { display: inline-block; width: 1.15em; height: 1.15em; flex: 0 0 auto; vertical-align: -0.2em; background: currentColor;
+      -webkit-mask: var(--ic) center / contain no-repeat; mask: var(--ic) center / contain no-repeat; }
+    .icon .ico { width: 22px; height: 22px; }
+    .icon { background: var(--accent-soft); color: var(--accent); }
+    .tile { background: var(--card); border: 1px solid transparent; }
+    .tile:hover { border-color: var(--line); }
+    .btn.ghost { background: var(--accent-soft); color: var(--accent); }
+    .chip.on { background: var(--accent-soft); color: var(--accent); }
+    .seg button.on { background: var(--bg); color: var(--accent); box-shadow: 0 1px 3px rgba(0, 0, 0, .1); }
+    .banner { background: var(--warn-soft); color: var(--text); }
+    .st.new { background: var(--warn-soft); color: var(--warn); }
+    .st.done { background: var(--ok-soft); color: var(--ok); }
+    .st.tg { background: var(--accent-soft); color: var(--accent); }
+    .help { border-left-color: var(--accent); }
+    .search::before { content: ""; width: 16px; height: 16px; background: var(--hint); opacity: 1;
+      -webkit-mask: url(https://cdn.jsdelivr.net/npm/@tabler/icons@3.19.0/icons/outline/search.svg) center / contain no-repeat;
+      mask: url(https://cdn.jsdelivr.net/npm/@tabler/icons@3.19.0/icons/outline/search.svg) center / contain no-repeat; }
+    h1 { font-weight: 700; letter-spacing: -.01em; }
+
+    body.shell-on #app { max-width: none; padding: 0; }
+    .side { display: none; }
+    .topbar { position: sticky; top: 0; z-index: 6; display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--bg); border-bottom: 1px solid var(--line); }
+    .depseg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--card); min-width: 0; }
+    .depseg button { padding: 6px 12px; border: 0; border-radius: 8px; background: none; color: var(--hint); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .depseg button.on { background: var(--bg); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .1); }
+    .today { color: var(--hint); font-size: 14px; white-space: nowrap; }
+    .searchbox { margin-left: auto; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 0; border-radius: 10px; background: var(--card); color: var(--hint); font: inherit; font-size: 14px; cursor: pointer; }
+    .searchbox span, .searchbox kbd { display: none; }
+    .searchbox kbd { font: inherit; font-size: 11px; padding: 1px 6px; border-radius: 5px; border: 1px solid var(--line); }
+    .view { position: relative; max-width: 760px; margin: 0 auto; padding: 14px 16px calc(96px + env(safe-area-inset-bottom)); }
+    .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; display: flex; background: var(--bg); border-top: 1px solid var(--line); padding: 4px 4px calc(4px + env(safe-area-inset-bottom)); }
+    .tabs button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border: 0; background: none; color: var(--hint); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
+    .tabs button .ico { width: 23px; height: 23px; }
+    .tabs button.on { color: var(--accent); }
+    .shell-on .inv-bar { bottom: calc(58px + env(safe-area-inset-bottom)); }
+    .shell-on #toast { bottom: calc(80px + env(safe-area-inset-bottom)); }
+    .fab { position: fixed; right: 16px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 7; width: 56px; height: 56px; border: 0; border-radius: 18px; background: var(--accent); color: var(--accent-text); box-shadow: 0 6px 18px rgba(var(--o), .4); cursor: pointer; display: grid; place-items: center; }
+    .fab .ico { width: 28px; height: 28px; }
+    .nav { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border: 0; border-radius: 10px; background: none; color: var(--hint); font: inherit; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; }
+    .nav:hover { color: var(--text); background: var(--accent-softer); }
+    .nav.on { background: var(--accent-soft); color: var(--accent); }
+    .nav .ico { width: 20px; height: 20px; }
+    .brand { display: flex; align-items: center; gap: 10px; padding: 4px 12px 18px; font-size: 18px; font-weight: 700; }
+    .logo { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); color: var(--accent-text); display: grid; place-items: center; }
+    .logo .ico { width: 18px; height: 18px; }
+
+    .home-head { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 14px; }
+    .home-head h1 { margin: 0; padding-right: 0; }
+    .home-head .sub { margin: 2px 0 0; }
+    .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    @media (max-width: 899px) {
+      .kpi:not(.main) { padding: 10px; }
+      .kpi:not(.main) .v { font-size: 17px; }
+      .kpi:not(.main) .l, .kpi:not(.main) .d { font-size: 12px; }
+    }
+    .kpi { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; min-width: 0; background: var(--bg); text-align: left; font: inherit; color: var(--text); cursor: pointer; }
+    .kpi.main { grid-column: 1 / -1; background: var(--accent-softer); border-color: rgba(var(--o), .2); }
+    .kpi .l { color: var(--hint); font-size: 13px; font-weight: 600; }
+    .kpi .v { font-size: 22px; font-weight: 700; margin-top: 2px; letter-spacing: -.01em; }
+    .kpi.main .v { font-size: 28px; }
+    .kpi .d { font-size: 13px; margin-top: 2px; color: var(--hint); }
+    .kpi svg { display: block; width: 100%; height: 30px; margin-top: 6px; }
+    .skel { background: linear-gradient(90deg, var(--card), var(--line), var(--card)); background-size: 200% 100%; animation: skel 1.2s infinite; border-radius: 8px; color: transparent !important; }
+    @keyframes skel { to { background-position: -200% 0; } }
+    .home-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 12px; }
+    .panel { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; background: var(--bg); min-width: 0; }
+    .panel h3 { margin: 0 0 6px; font-size: 16px; }
+    .att { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 0; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+    .att:last-child { border-bottom: 0; }
+    .att .dot { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex: 0 0 34px; }
+    .att .dot .ico { width: 18px; height: 18px; }
+    .att .t-main div:last-child { color: var(--hint); font-size: 13px; }
+    .pill { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 12px; white-space: nowrap; }
+    .c-danger { background: var(--danger-soft); color: var(--danger); }
+    .c-warn { background: var(--warn-soft); color: var(--warn); }
+    .c-ok { background: var(--ok-soft); color: var(--ok); }
+    .c-mute { background: var(--card); color: var(--hint); }
+    .c-acc { background: var(--accent-soft); color: var(--accent); }
+    .bars { display: block; width: 100%; height: 120px; }
+    .bars-x { display: flex; justify-content: space-between; color: var(--hint); font-size: 12px; margin-top: 4px; }
+    .acts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+    .acts button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px; border: 0; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .acts button.pri { background: var(--accent); color: var(--accent-text); }
+    .acts .ico { width: 22px; height: 22px; }
+    .gs-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 4px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+    .gs-row small { color: var(--hint); }
+
+    @media (min-width: 900px) {
+      body.shell-on #app { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: 100vh; }
+      .side { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 0; height: 100vh; overflow: auto; padding: 18px 12px; background: var(--accent-softer); border-right: 1px solid var(--line); }
+      .side-foot { margin-top: auto; }
+      .tabs, .fab { display: none; }
+      .topbar { padding: 12px 32px; }
+      .searchbox { min-width: 260px; }
+      .searchbox span, .searchbox kbd { display: inline; }
+      .searchbox kbd { margin-left: auto; }
+      .view { margin: 0; max-width: 820px; padding: 22px 32px 48px; }
+      .view.wide { max-width: 1200px; }
+      .shell-on .inv-bar { bottom: 0; margin: 14px -32px 0; padding: 12px 32px; }
+      .shell-on #toast { bottom: 24px; }
+      .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .kpi.main { grid-column: auto; }
+      .kpi.main .v { font-size: 24px; }
+      .home-grid { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+      .sheet-bg { align-items: center; }
+      .sheet { border-radius: 20px; max-height: 86vh; }
+    }
   </style>
 </head>
 <body>
@@ -396,7 +519,7 @@ function lsDel(k) { try { localStorage.removeItem(k); } catch (e) { /* нет х
 const HELP = {
   units: ['С чего начать', 'Выберите, где работаете.<br>«ООО «Виктория»» — данные прямо из iiko: товары, остатки, документы.<br>«Геншин кафе» — учёт внутри приложения.'],
   ikDeps: ['Заведения', 'Выберите заведение. У каждого свои склады: бар, кухня, хозтовары.'],
-  ikHome: ['Главный экран заведения', '<ol><li>Синие кнопки — создать документ: приход товара, списание или инвентаризацию.</li><li>Поиск — быстро узнать, сколько товара на складах.</li><li>«Журнал документов» — всё, что было, по дням.</li></ol>Всё, что вы отправляете, попадает в iiko <b style="display:inline">непроведённым</b>: его проверяют и проводят в iikoOffice.'],
+  ikHome: ['Главная', '<ol><li>Сверху — цифры за вчера: выручка, фудкост, списания, цены. Нажмите на карточку, чтобы открыть подробности.</li><li>«Требует внимания» — что стоит проверить сегодня.</li><li>Новый документ — кнопки «Приход», «Списание», «Инвентаризация» (на телефоне — оранжевая «+»).</li><li>Заведение переключается вверху, разделы — в меню.</li></ol>Всё, что вы отправляете, попадает в iiko <b style="display:inline">непроведённым</b>: его проверяют и проводят в iikoOffice.'],
   ikItems: ['Номенклатура', 'Все товары из iiko и сколько их сейчас на складах заведения. Ищите по названию, группе или артикулу.'],
   ikStock: ['Остатки', 'Сколько товара на складе на выбранную дату. Можно смотреть по одному складу или по всем сразу. Красным — товары в минусе: обычно это значит, что не заведён приход.'],
   ikJournal: ['Журнал документов', 'Все приходы и списания заведения из iiko и инвентаризации из приложения — по дням. Сверху выберите период, ниже — поиск по номеру, поставщику или товару. Нажмите на документ, чтобы посмотреть состав или повторить его.'],
@@ -443,25 +566,29 @@ if (inTelegram) tg.BackButton.onClick(back);
 
 function render() {
   const r = stack[stack.length - 1];
-  if (inTelegram) stack.length > 1 ? tg.BackButton.show() : tg.BackButton.hide();
-  const backLink = (!inTelegram && stack.length > 1) ? '<button class="back" id="back">‹ Назад</button>' : '';
-  $app.innerHTML = backLink;
+  const shell = inShell();
+  document.body.classList.toggle('shell-on', shell);
+  const showBack = shell ? !atSectionRoot() : stack.length > 1;
+  if (inTelegram) showBack ? tg.BackButton.show() : tg.BackButton.hide();
+  let box = $app;
+  if (shell) { $app.innerHTML = shellHtml(r); bindShell(); box = $app.querySelector('#view'); } else $app.innerHTML = '';
+  if (!inTelegram && showBack) box.insertAdjacentHTML('beforeend', '<button class="back" id="back">‹ Назад</button>');
   const help = helpFor(r);
   if (help) {
     const seenKey = 'help_' + r.view + (r.type ? '_' + r.type : '');
     const card = document.createElement('div');
     card.className = 'help';
-    card.innerHTML = `<b>💡 ${help[0]}</b>${help[1]}<br><button class="btn sm ghost">Понятно</button>`;
+    card.innerHTML = `<b>${help[0]}</b>${help[1]}<br><button class="btn sm ghost">Понятно</button>`;
     card.style.display = lsGet(seenKey) ? 'none' : '';
     card.querySelector('button').onclick = () => { card.style.display = 'none'; lsSet(seenKey, '1'); };
-    $app.appendChild(card);
+    box.appendChild(card);
     const fab = document.createElement('button');
     fab.className = 'help-fab'; fab.textContent = '?'; fab.title = 'Подсказка';
     fab.onclick = () => { const hidden = card.style.display === 'none'; card.style.display = hidden ? '' : 'none'; if (hidden) window.scrollTo(0, 0); };
-    $app.appendChild(fab);
+    box.appendChild(fab);
   }
   const holder = document.createElement('div');
-  $app.appendChild(holder);
+  box.appendChild(holder);
   VIEWS[r.view](holder, r);
   const b = document.getElementById('back');
   if (b) b.onclick = back;
@@ -517,6 +644,7 @@ VIEWS.units = (el) => {
 async function openUnit(key) {
   haptic();
   unitKey = key;
+  lsSet('lastUnit', UNITS[key].iiko ? 'victoria' : key);
   if (UNITS[key].iiko) {
     stack.length = 1;
     stack.push({ view: 'ikDeps' });
@@ -1239,44 +1367,6 @@ VIEWS.ikDeps = (el) => withLoading(el, async () => {
       </button>`).join('') || '<div class="empty">В iiko не найдено заведений</div>'}`;
   el.querySelectorAll('[data-id]').forEach(b => b.onclick = () => { IK.dep = deps.find(d => d.id === b.dataset.id); go('ikHome'); });
 });
-
-VIEWS.ikHome = (el) => {
-  const drafts = Object.keys(DOC_TYPES).map(k => [k, loadDraft(k)]).filter(([k, d]) => draftSize(k, d));
-  const tile = (go_, icon, name, desc) => `
-    <button class="tile" data-go="${go_}">
-      <span class="icon">${icon}</span>
-      <span class="t-main"><div class="t-name">${name}</div><div class="t-desc">${desc}</div></span>
-      <span class="arrow">›</span>
-    </button>`;
-  el.innerHTML = `
-    <h1>${h(IK.dep.name)}</h1>
-    <p class="sub">${h(UNITS[unitKey].title)} · данные из iiko</p>
-    ${drafts.map(([k, d]) => `
-      <div class="banner">📝 <span>Незаконченный документ: <b>${DOC_TYPES[k].name.toLowerCase()}</b>, ${draftSize(k, d)} поз.</span>
-        <button class="btn sm" data-new="${k}">Продолжить</button></div>`).join('')}
-    <form class="search" id="sf"><input id="q" type="search" placeholder="Найти товар и его остаток" enterkeyhint="search"></form>
-    <div class="section-title">Создать документ</div>
-    <div class="qa">
-      <button data-new="invoice"><span class="e">🧾</span>Приход<br>(накладная)</button>
-      <button data-new="writeoff"><span class="e">📤</span>Списание</button>
-      <button data-inv="1"><span class="e">📋</span>Начать инвентари&shy;зацию</button>
-    </div>
-    <div class="section-title">Посмотреть</div>
-    ${tile('ikStock', '📊', 'Остатки', 'Сейчас или на любую дату')}
-    ${tile('ikJournal', '🗂', 'Журнал документов', 'Все документы по дням')}
-    ${tile('ikPrices', '📈', 'Цены поставщиков', 'Что подорожало и подешевело, история закупок')}
-    ${tile('ikTtk', '📖', 'Техкарты', 'Блюда, заготовки, модификаторы — просмотр и изменение')}
-    ${tile('ikItems', '📦', 'Номенклатура', 'Товары, артикулы, единицы')}
-    ${tile('ikExport', '📥', 'Выгрузка в Excel', 'Остатки и товары таблицей')}`;
-  el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
-  el.querySelectorAll('[data-new]').forEach(b => b.onclick = () => go('ikDoc', { type: b.dataset.new }));
-  el.querySelector('[data-inv]').onclick = invStart;
-  el.querySelector('#sf').onsubmit = (e) => {
-    e.preventDefault();
-    const q = el.querySelector('#q').value.trim();
-    go('ikItems', { q });
-  };
-};
 
 /* ---------- Документы в iiko (создаются непроведёнными) ---------- */
 const DOC_TYPES = {
@@ -2724,7 +2814,7 @@ VIEWS.ikTtkCard = (el, r) => withLoading(el, async () => {
 
 /* ---------- Динамика закупочных цен (по приходным накладным) ---------- */
 const PRICE_PERIODS = [['30', 'Месяц'], ['90', '3 мес'], ['180', 'Полгода'], ['365', 'Год']];
-const PRICE_FILTERS = [['up', 'Дороже'], ['down', 'Дешевле'], ['check', '⚠️ Проверить'], ['all', 'Все']];
+const PRICE_FILTERS = [['up', 'Дороже'], ['down', 'Дешевле'], ['check', 'Проверить'], ['all', 'Все']];
 const SUP_COLORS = ['#2481cc', '#e8833a', '#2e9e4f', '#9b51e0', '#d64545', '#1aa3a3', '#b8860b', '#666'];
 const fPrice = (n) => n == null ? '—' : n.toLocaleString('ru-RU', { maximumFractionDigits: n >= 100 ? 0 : 2 }) + ' ₽';
 const fPct = (x) => (x > 0 ? '+' : '') + Math.round(x) + '%';
@@ -2887,7 +2977,260 @@ VIEWS.ikExport = (el) => {
   });
 };
 
-render();
+/* ================= Новый каркас: меню, заведения, поиск ================= */
+const ICON_BASE = 'https://cdn.jsdelivr.net/npm/@tabler/icons@3.19.0/icons/outline/';
+const ico = (n) => `<i class="ico" style="--ic:url(${ICON_BASE}${n}.svg)" aria-hidden="true"></i>`;
+const NAV = [
+  { view: 'ikHome', icon: 'layout-dashboard', title: 'Главная', tab: true },
+  { view: 'ikJournal', icon: 'file-invoice', title: 'Документы', tab: true },
+  { view: 'ikStock', icon: 'box', title: 'Остатки', tab: true },
+  { act: 'inv', icon: 'clipboard-list', title: 'Инвентаризация' },
+  { view: 'ikTtk', icon: 'book', title: 'Техкарты', tab: true },
+  { view: 'ikPrices', icon: 'chart-line', title: 'Цены' },
+  { view: 'ikItems', icon: 'package', title: 'Номенклатура' },
+  { view: 'ikExport', icon: 'download', title: 'Выгрузка' },
+];
+const SECTION_OF = { ikDoc: 'ikHome', ikInvReview: 'ikHome', ikDocView: 'ikJournal', ikDocs: 'ikJournal', ikTtkCard: 'ikTtk', ikPrice: 'ikPrices' };
+const homeIdx = () => stack.findIndex(s => s.view === 'ikHome');
+const inShell = () => unitKey === 'victoria' && IK.dep && IK.meta && homeIdx() >= 0;
+function currentSection() {
+  for (let i = stack.length - 1; i >= 0; i--) {
+    const v = stack[i].view;
+    if (NAV.some(n => n.view === v)) return v;
+    if (SECTION_OF[v]) return SECTION_OF[v];
+  }
+  return 'ikHome';
+}
+const atSectionRoot = () => inShell() && stack.length - 1 <= homeIdx() + 1 && NAV.some(n => n.view === stack[stack.length - 1].view);
+function goSection(view, params = {}) {
+  closeAllSheets();
+  stack.length = homeIdx() + 1;
+  if (view !== 'ikHome') stack.push({ view, ...params });
+  haptic(); render();
+}
+function closeAllSheets() { while (sheetStack.length) sheetStack[sheetStack.length - 1].close(); }
+function navAct(n) { if (n.act === 'inv') invStart(); else goSection(n.view); }
+function switchDep(id) {
+  const d = IK.meta.departments.find(x => x.id === id);
+  if (!d || d.id === IK.dep.id) return;
+  IK.dep = d; lsSet('lastDep', d.id);
+  goSection(currentSection());
+}
+function toUnits() { closeAllSheets(); stack.length = 1; lsSet('lastUnit', ''); render(); }
+const todayLabel = () => new Date().toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' });
+
+function shellHtml(r) {
+  const cur = currentSection();
+  const deps = IK.meta.departments;
+  const short = (n) => /эйв/i.test(n) ? 'Эйва' : /бкм/i.test(n) ? 'БКМ' : n;
+  return `
+    <aside class="side">
+      <div class="brand"><span class="logo">${ico('building-warehouse')}</span>Склад</div>
+      ${NAV.map((n, i) => `<button class="nav ${n.view === cur ? 'on' : ''}" data-nav="${i}">${ico(n.icon)}<span>${n.title}</span></button>`).join('')}
+      <div class="side-foot"><button class="nav" data-units>${ico('arrows-exchange')}<span>Другое подразделение</span></button></div>
+    </aside>
+    <div class="mainwrap">
+      <header class="topbar">
+        <div class="depseg">${deps.map(d => `<button data-dep="${d.id}" class="${d.id === IK.dep.id ? 'on' : ''}">${h(short(d.name))}</button>`).join('')}</div>
+        <span class="today">${todayLabel()}</span>
+        <button class="searchbox" id="gs" aria-label="Поиск">${ico('search')}<span>Товар, блюдо…</span><kbd>Ctrl K</kbd></button>
+      </header>
+      <div id="view" class="view ${r.view === 'ikHome' ? 'wide' : ''}"></div>
+    </div>
+    <nav class="tabs">
+      ${NAV.map((n, i) => n.tab ? `<button class="${n.view === cur ? 'on' : ''}" data-nav="${i}">${ico(n.icon)}<span>${n.title}</span></button>` : '').join('')}
+      <button data-more class="${NAV.some(n => !n.tab && n.view === cur) ? 'on' : ''}">${ico('dots')}<span>Ещё</span></button>
+    </nav>`;
+}
+
+function bindShell() {
+  $app.querySelectorAll('[data-nav]').forEach(b => b.onclick = () => navAct(NAV[+b.dataset.nav]));
+  $app.querySelectorAll('[data-dep]').forEach(b => b.onclick = () => switchDep(b.dataset.dep));
+  $app.querySelector('[data-units]').onclick = toUnits;
+  $app.querySelector('#gs').onclick = globalSearch;
+  $app.querySelector('[data-more]').onclick = () => {
+    const sh = openSheet(`<h2>Ещё</h2>
+      ${NAV.map((n, i) => n.tab ? '' : `<button class="nav" data-i="${i}">${ico(n.icon)}<span>${n.title}</span></button>`).join('')}
+      <button class="nav" data-u>${ico('arrows-exchange')}<span>Другое подразделение</span></button>`);
+    sh.el.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { sh.close(); navAct(NAV[+b.dataset.i]); });
+    sh.el.querySelector('[data-u]').onclick = () => { sh.close(); toUnits(); };
+  };
+}
+
+/* Поиск по всему: товары → остатки, блюда и заготовки → техкарта */
+async function globalSearch() {
+  if (!inShell() || sheetStack.length) return;
+  const sh = openSheet(`<h2>Поиск</h2>
+    <div class="search"><input id="gq" type="search" placeholder="Товар, блюдо, заготовка" autocomplete="off"></div>
+    <div id="gl" class="pick-list"></div>`);
+  const list = (await ikProducts()).filter(p => !p.deleted && ['GOODS', 'PREPARED', 'DISH', 'MODIFIER'].includes(p.type));
+  const gq = sh.el.querySelector('#gq'), gl = sh.el.querySelector('#gl');
+  const KIND = { GOODS: 'Товар → остатки', PREPARED: 'Заготовка → техкарта', DISH: 'Блюдо → техкарта', MODIFIER: 'Модификатор → техкарта' };
+  const draw = () => {
+    const q = norm(gq.value).trim();
+    if (!q) { gl.innerHTML = '<p class="hint">Начните вводить название</p>'; return; }
+    const words = q.split(/\s+/);
+    const found = list.filter(p => { const n = norm(p.name); return words.every(w => n.includes(w)); })
+      .sort((a, b) => (norm(a.name).startsWith(q) ? 0 : 1) - (norm(b.name).startsWith(q) ? 0 : 1) || a.name.length - b.name.length).slice(0, 40);
+    gl.innerHTML = found.map(p => `<button class="gs-row" data-id="${p.id}"><span class="t-main"><div>${h(p.name.trim())}</div>
+      <small>${KIND[p.type]} · ${h(p.group || 'без группы')}</small></span>${ico('chevron-right')}</button>`).join('') || '<div class="empty">Ничего не найдено</div>';
+  };
+  gq.oninput = draw;
+  gl.onclick = (e) => {
+    const b = e.target.closest('[data-id]'); if (!b) return;
+    const p = list.find(x => x.id === b.dataset.id);
+    sh.close();
+    if (p.type === 'GOODS') goSection('ikItems', { q: p.name.trim() });
+    else { goSection('ikTtk'); go('ikTtkCard', { id: p.id }); }
+  };
+  draw();
+  setTimeout(() => gq.focus(), 50);
+}
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'л' || e.code === 'KeyK')) { e.preventDefault(); globalSearch(); }
+});
+
+/* Тема: тёмная, если в Telegram ночной режим (или в системе) */
+function applyTheme() {
+  const dark = tg && tg.colorScheme ? tg.colorScheme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+  try { if (tg && tg.setHeaderColor) { tg.setHeaderColor(bg); tg.setBackgroundColor(bg); } } catch (e) { /* старый Telegram */ }
+}
+applyTheme();
+if (tg && tg.onEvent) tg.onEvent('themeChanged', applyTheme);
+
+/* ================= Главная: сводка по заведению ================= */
+async function ikDashboard() {
+  IK.dash = IK.dash || {};
+  const c = IK.dash[IK.dep.id];
+  if (c && Date.now() - c.at < 5 * 60 * 1000) return c.data;
+  const data_ = await api('/api/dashboard?dept=' + IK.dep.id);
+  IK.dash[IK.dep.id] = { at: Date.now(), data: data_ };
+  return data_;
+}
+const fRubK = (n) => Math.round(n || 0).toLocaleString('ru-RU') + ' ₽';
+
+function spark(values) {
+  if (values.length < 2) return '';
+  const hi = Math.max(...values, 1), W = 100, H = 30;
+  const pts = values.map((v, i) => `${(i / (values.length - 1) * W).toFixed(1)},${(H - 3 - v / hi * (H - 6)).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline fill="none" stroke="var(--accent)" stroke-opacity=".75" stroke-width="2" vector-effect="non-scaling-stroke" points="${pts}"/></svg>`;
+}
+function barsSvg(series) {
+  const hi = Math.max(...series.map(s => s.sum), 1), n = series.length, W = 280, H = 110, gap = 4, bw = (W - gap * (n - 1)) / n;
+  return `<svg class="bars" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${series.map((s, i) => {
+    const bh = Math.max(2, s.sum / hi * (H - 4));
+    return `<rect x="${(i * (bw + gap)).toFixed(1)}" y="${(H - bh).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="3"
+      fill="var(--accent)" fill-opacity="${i === n - 1 ? 1 : .22}"><title>${fDate(s.date)}: ${fRubK(s.sum)}</title></rect>`;
+  }).join('')}</svg>`;
+}
+
+VIEWS.ikHome = (el) => {
+  lsSet('lastUnit', 'victoria'); lsSet('lastDep', IK.dep.id);
+  const drafts = Object.keys(DOC_TYPES).map(k => [k, loadDraft(k)]).filter(([k, d]) => draftSize(k, d));
+  const sk = '<span class="skel">000 000 ₽</span>';
+  el.innerHTML = `
+    <div class="home-head"><div><h1>${h(IK.dep.name)}</h1><p class="sub" id="hs">Сводка за вчера</p></div></div>
+    ${drafts.map(([k, d]) => `
+      <div class="banner">${ico('file-pencil')} <span>Незаконченный документ: <b>${DOC_TYPES[k].name.toLowerCase()}</b>, ${draftSize(k, d)} поз.</span>
+        <button class="btn sm" data-new="${k}">Продолжить</button></div>`).join('')}
+    <div class="kpis">
+      <button class="kpi main" data-k="rev"><div class="l">Выручка вчера</div><div class="v" id="kRev">${sk}</div><div class="d" id="kRevD">&nbsp;</div><div id="kSpark"></div></button>
+      <button class="kpi" data-k="fc"><div class="l">Фудкост</div><div class="v" id="kFc">${sk}</div><div class="d" id="kFcD">&nbsp;</div></button>
+      <button class="kpi" data-k="wo"><div class="l">Списано</div><div class="v" id="kWo">${sk}</div><div class="d">вчера, себест.</div></button>
+      <button class="kpi" data-k="pr"><div class="l">Цены</div><div class="v" id="kPr">${sk}</div><div class="d" id="kPrD">&nbsp;</div></button>
+    </div>
+    <div class="home-grid">
+      <section class="panel"><h3>Требует внимания</h3><div id="attn"><p class="hint">Загружаю из iiko…</p></div></section>
+      <section class="panel"><h3>Выручка, 14 дней</h3><div id="bars"><div class="skel" style="height:110px"></div></div><div class="bars-x" id="barsX"></div>
+        <div class="acts">
+          <button class="pri" data-new="invoice">${ico('file-plus')}Приход</button>
+          <button data-new="writeoff">${ico('file-minus')}Списание</button>
+          <button data-inv>${ico('clipboard-list')}Инвентар.</button>
+        </div></section>
+    </div>
+    <button class="fab" id="fab" aria-label="Новый документ">${ico('plus')}</button>`;
+  const newDoc = (k) => go('ikDoc', { type: k });
+  el.querySelectorAll('[data-new]').forEach(b => b.onclick = () => newDoc(b.dataset.new));
+  el.querySelector('[data-inv]').onclick = invStart;
+  el.querySelector('#fab').onclick = () => {
+    const sh = openSheet(`<h2>Новый документ</h2><div class="pick">
+      <button data-m="invoice"><span class="e">${ico('file-plus')}</span><span><b>Приход</b><small>Накладная от поставщика</small></span></button>
+      <button data-m="writeoff"><span class="e">${ico('file-minus')}</span><span><b>Списание</b><small>Порча, персонал, представительские</small></span></button>
+      <button data-m="inv"><span class="e">${ico('clipboard-list')}</span><span><b>Инвентаризация</b><small>Пересчёт склада</small></span></button></div>`);
+    sh.el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { sh.close(); b.dataset.m === 'inv' ? invStart() : newDoc(b.dataset.m); });
+  };
+  el.querySelector('[data-k="fc"]').onclick = () => goSection('ikTtk', { mode: 'fc' });
+  el.querySelector('[data-k="pr"]').onclick = () => goSection('ikPrices', { filter: 'up', days: '30' });
+  el.querySelector('[data-k="wo"]').onclick = () => goSection('ikJournal');
+  el.querySelector('[data-k="rev"]').onclick = () => {};
+  const depId = IK.dep.id;
+  ikDashboard().then(dsh => {
+    if (!IK.dep || IK.dep.id !== depId || !el.isConnected) return;
+    const set = (id, html) => { const x = el.querySelector('#' + id); if (x) x.innerHTML = html; };
+    set('hs', 'Сводка за вчера, ' + new Date(dsh.date).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }));
+    set('kRev', fRubK(dsh.revenue));
+    if (dsh.revenueWeekAgo) {
+      const x = (dsh.revenue - dsh.revenueWeekAgo) / dsh.revenueWeekAgo * 100;
+      set('kRevD', `<span class="${x >= 0 ? 'plus' : 'minus'}">${x >= 0 ? '+' : ''}${Math.round(x)}%</span> к тому же дню неделю назад`);
+    }
+    set('kSpark', spark(dsh.series.map(s => s.sum)));
+    const fc = dsh.foodcost;
+    set('kFc', fc.avg != null ? Math.round(fc.avg) + '%' : '—');
+    set('kFcD', `норма ${fc.limit}%` + (fc.over ? ` · <span class="minus">выше — ${fc.over}</span>` : ''));
+    set('kWo', fRubK(dsh.writeoff));
+    set('kPr', `${dsh.prices.up} ↑ ${dsh.prices.down} ↓`);
+    set('kPrD', dsh.prices.check ? `<span class="minus">${dsh.prices.check} проверить</span>` : 'за неделю');
+    set('bars', barsSvg(dsh.series));
+    set('barsX', `<span>${fDate(dsh.series[0].date).slice(0, 5)}</span><span>${fDate(dsh.series[dsh.series.length - 1].date).slice(0, 5)}</span>`);
+    const row = (key, icon, cls, title, sub, pill, pcls) => `<button class="att" data-a="${key}"><span class="dot ${cls}">${ico(icon)}</span>
+      <span class="t-main"><div>${title}</div><div>${sub}</div></span><span class="pill ${pcls}">${pill}</span></button>`;
+    set('attn', [
+      row('neg', 'arrow-down-right', dsh.negNewCount ? 'c-danger' : 'c-mute', 'Ушли в минус за день', `всего в минусе ${dsh.negAll}`,
+        dsh.negNewCount ? dsh.negNewCount + ' нов.' : 'нет', dsh.negNewCount ? 'c-danger' : 'c-ok'),
+      row('nd', 'file-alert', dsh.notDoneCount ? 'c-warn' : 'c-mute', 'Не проведены в iiko', 'накладные и списания за 2 недели',
+        dsh.notDoneCount || 'нет', dsh.notDoneCount ? 'c-warn' : 'c-ok'),
+      row('chk', 'alert-triangle', dsh.prices.check ? 'c-warn' : 'c-mute', 'Цена в разы — проверьте единицы', 'накладные за неделю',
+        dsh.prices.check || 'нет', dsh.prices.check ? 'c-warn' : 'c-ok'),
+      row('fc', 'chef-hat', fc.over + fc.broken ? 'c-acc' : 'c-mute', `Фудкост выше ${fc.limit}%`, fc.broken ? `ещё ${fc.broken} — похоже на ошибку в техкарте` : 'по продажам за 30 дней',
+        (fc.over + fc.broken) || 'нет', fc.over + fc.broken ? 'c-acc' : 'c-ok'),
+    ].join(''));
+    el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
+      const a = b.dataset.a;
+      if (a === 'neg') openSheet(`<h2>Ушли в минус за день</h2><p class="sub">Обычно это значит, что не заведён приход или перемещение.</p>
+        ${dsh.negNew.map(x => `<div class="rep-row"><span class="t-main"><div>${h(x.name)}</div><div class="cnt-meta">${h(x.store)}</div></span>
+          <span class="t-side minus"><b>${fQty(x.amount)}</b> ${h(x.unit)}</span></div>`).join('') || '<div class="empty">Новых минусов нет</div>'}`);
+      else if (a === 'nd') openSheet(`<h2>Не проведены в iiko</h2><p class="sub">Проверьте и проведите в iikoOffice.</p>
+        ${dsh.notDone.map(x => `<div class="rep-row"><span class="t-main"><div>${x.kind === 'invoice' ? 'Накладная' : 'Списание'} № ${h(x.number)}</div>
+          <div class="cnt-meta">${fDate(x.date)}${x.who ? ' · ' + h(x.who) : ''}</div></span></div>`).join('') || '<div class="empty">Всё проведено</div>'}`);
+      else if (a === 'chk') goSection('ikPrices', { filter: 'check', days: '30' });
+      else if (a === 'fc') goSection('ikTtk', { mode: 'fc' });
+    });
+  }).catch(e => {
+    const x = el.querySelector('#attn');
+    if (x) x.innerHTML = `<p class="hint">${/Not Found|404/.test(e.message) ? 'Сводка появится после перезапуска сервера (start.cmd).' : h(e.message)}</p>`;
+    el.querySelectorAll('.skel').forEach(s => { s.classList.remove('skel'); s.textContent = '—'; });
+  });
+};
+
+/* Быстрый старт: сразу открыть последнее заведение */
+async function boot() {
+  if (lsGet('lastUnit') === 'victoria' && lsGet('lastDep')) {
+    $app.innerHTML = '<p class="hint" style="padding:16px">Загрузка…</p>';
+    try {
+      IK.meta = IK.meta || await api('/api/meta');
+      const d = IK.meta.departments.find(x => x.id === lsGet('lastDep'));
+      if (d) {
+        unitKey = 'victoria'; IK.dep = d;
+        stack.length = 1; stack.push({ view: 'ikDeps' }, { view: 'ikHome' });
+      }
+    } catch (e) { console.error(e); }
+  }
+  render();
+}
+
+boot();
 </script>
 </body>
 </html>
